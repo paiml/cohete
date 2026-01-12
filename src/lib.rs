@@ -166,21 +166,74 @@ mod tests {
 
     #[test]
     fn test_jetson_model_memory() {
+        assert_eq!(JetsonModel::OrinNano4GB.memory_mb(), 4096);
         assert_eq!(JetsonModel::OrinNano8GB.memory_mb(), 8192);
+        assert_eq!(JetsonModel::OrinNX8GB.memory_mb(), 8192);
+        assert_eq!(JetsonModel::OrinNX16GB.memory_mb(), 16384);
+        assert_eq!(JetsonModel::AgxOrin32GB.memory_mb(), 32768);
         assert_eq!(JetsonModel::AgxOrin64GB.memory_mb(), 65536);
+        assert_eq!(JetsonModel::Unknown.memory_mb(), 0);
+    }
+
+    #[test]
+    fn test_jetson_model_cuda_cores() {
+        assert_eq!(JetsonModel::OrinNano4GB.cuda_cores(), 512);
+        assert_eq!(JetsonModel::OrinNano8GB.cuda_cores(), 1024);
+        assert_eq!(JetsonModel::OrinNX8GB.cuda_cores(), 1024);
+        assert_eq!(JetsonModel::OrinNX16GB.cuda_cores(), 1024);
+        assert_eq!(JetsonModel::AgxOrin32GB.cuda_cores(), 2048);
+        assert_eq!(JetsonModel::AgxOrin64GB.cuda_cores(), 2048);
+        assert_eq!(JetsonModel::Unknown.cuda_cores(), 0);
     }
 
     #[test]
     fn test_jetson_model_display() {
-        assert_eq!(
-            JetsonModel::OrinNano8GB.to_string(),
-            "Jetson Orin Nano 8GB"
-        );
+        assert_eq!(JetsonModel::OrinNano4GB.to_string(), "Jetson Orin Nano 4GB");
+        assert_eq!(JetsonModel::OrinNano8GB.to_string(), "Jetson Orin Nano 8GB");
+        assert_eq!(JetsonModel::OrinNX8GB.to_string(), "Jetson Orin NX 8GB");
+        assert_eq!(JetsonModel::OrinNX16GB.to_string(), "Jetson Orin NX 16GB");
+        assert_eq!(JetsonModel::AgxOrin32GB.to_string(), "Jetson AGX Orin 32GB");
+        assert_eq!(JetsonModel::AgxOrin64GB.to_string(), "Jetson AGX Orin 64GB");
+        assert_eq!(JetsonModel::Unknown.to_string(), "Unknown Jetson");
     }
 
     #[test]
     fn test_jetson_model_tops() {
+        assert_eq!(JetsonModel::OrinNano4GB.tops(), 20);
         assert_eq!(JetsonModel::OrinNano8GB.tops(), 40);
+        assert_eq!(JetsonModel::OrinNX8GB.tops(), 70);
+        assert_eq!(JetsonModel::OrinNX16GB.tops(), 100);
+        assert_eq!(JetsonModel::AgxOrin32GB.tops(), 200);
         assert_eq!(JetsonModel::AgxOrin64GB.tops(), 275);
+        assert_eq!(JetsonModel::Unknown.tops(), 0);
+    }
+
+    #[test]
+    fn test_jetson_model_equality() {
+        assert_eq!(JetsonModel::OrinNano8GB, JetsonModel::OrinNano8GB);
+        assert_ne!(JetsonModel::OrinNano8GB, JetsonModel::OrinNano4GB);
+    }
+
+    #[test]
+    fn test_jetson_model_clone() {
+        let model = JetsonModel::AgxOrin64GB;
+        let cloned = model;
+        assert_eq!(model, cloned);
+    }
+
+    #[test]
+    fn test_jetson_model_hash() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(JetsonModel::OrinNano8GB);
+        set.insert(JetsonModel::OrinNano8GB);
+        assert_eq!(set.len(), 1);
+        set.insert(JetsonModel::OrinNano4GB);
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn test_version_constant() {
+        assert!(!VERSION.is_empty());
     }
 }

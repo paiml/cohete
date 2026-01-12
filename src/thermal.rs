@@ -244,6 +244,7 @@ mod tests {
         let policy = ThermalPolicy::conservative();
         assert_eq!(policy.threshold_c, 65.0);
         assert_eq!(policy.cooldown_c, 55.0);
+        assert_eq!(policy.check_interval_ms, 500);
     }
 
     #[test]
@@ -251,6 +252,81 @@ mod tests {
         let policy = ThermalPolicy::aggressive();
         assert_eq!(policy.threshold_c, 75.0);
         assert_eq!(policy.cooldown_c, 65.0);
+        assert_eq!(policy.check_interval_ms, 1000);
+    }
+
+    #[test]
+    fn test_thermal_policy_custom() {
+        let policy = ThermalPolicy::custom(80.0, 70.0, 250);
+        assert_eq!(policy.threshold_c, 80.0);
+        assert_eq!(policy.cooldown_c, 70.0);
+        assert_eq!(policy.check_interval_ms, 250);
+    }
+
+    #[test]
+    fn test_thermal_policy_default() {
+        let policy = ThermalPolicy::default();
+        assert_eq!(policy.threshold_c, 65.0);
+        assert_eq!(policy.cooldown_c, 55.0);
+    }
+
+    #[test]
+    fn test_thermal_policy_clone() {
+        let policy = ThermalPolicy::aggressive();
+        let cloned = policy.clone();
+        assert_eq!(cloned.threshold_c, policy.threshold_c);
+        assert_eq!(cloned.cooldown_c, policy.cooldown_c);
+    }
+
+    #[test]
+    fn test_tegra_stats_default() {
+        let stats = TegraStats::default();
+        assert_eq!(stats.gpu_temp, 0.0);
+        assert_eq!(stats.cpu_temp, 0.0);
+        assert_eq!(stats.total_memory_mb, 0);
+    }
+
+    #[test]
+    fn test_tegra_stats_clone() {
+        let stats = TegraStats {
+            gpu_temp: 55.0,
+            cpu_temp: 52.0,
+            soc_temp: 53.0,
+            total_memory_mb: 8192,
+            used_memory_mb: 4096,
+            available_memory_mb: 4096,
+            gpu_utilization: 75.0,
+            cpu_utilization: 50.0,
+            power_watts: 10.5,
+        };
+        let cloned = stats.clone();
+        assert_eq!(cloned.gpu_temp, 55.0);
+        assert_eq!(cloned.power_watts, 10.5);
+    }
+
+    #[test]
+    fn test_thermal_zone_variants() {
+        assert_eq!(ThermalZone::Gpu, ThermalZone::Gpu);
+        assert_ne!(ThermalZone::Gpu, ThermalZone::Cpu);
+        assert_ne!(ThermalZone::Soc, ThermalZone::Board);
+    }
+
+    #[test]
+    fn test_tegra_monitor_new() {
+        let monitor = TegraMonitor::new();
+        assert!(monitor.last_stats.is_none());
+    }
+
+    #[test]
+    fn test_tegra_monitor_default() {
+        let monitor = TegraMonitor::default();
+        assert!(monitor.last_stats.is_none());
+    }
+
+    #[test]
+    fn test_tegra_monitor_with_policy() {
+        let monitor = TegraMonitor::new().with_policy(ThermalPolicy::aggressive());
+        assert_eq!(monitor.policy.threshold_c, 75.0);
     }
 
     #[test]
@@ -259,6 +335,33 @@ mod tests {
         let stats = monitor.sample().unwrap();
         assert!(stats.gpu_temp > 0.0);
         assert!(stats.total_memory_mb > 0);
+        assert!(stats.available_memory_mb > 0);
+        assert!(monitor.last_stats.is_some());
+    }
+
+    #[test]
+    fn test_tegra_monitor_gpu_temp() {
+        let mut monitor = TegraMonitor::new();
+        let temp = monitor.gpu_temp().unwrap();
+        assert_eq!(temp, 45.0); // Placeholder value
+    }
+
+    #[test]
+    fn test_tegra_monitor_is_throttled() {
+        let mut monitor = TegraMonitor::new();
+        // Placeholder returns 45°C, threshold is 65°C
+        assert!(!monitor.is_throttled().unwrap());
+
+        // With aggressive policy threshold 75°C
+        let mut monitor2 = TegraMonitor::new().with_policy(ThermalPolicy::aggressive());
+        assert!(!monitor2.is_throttled().unwrap());
+    }
+
+    #[test]
+    fn test_circuit_breaker_new() {
+        let monitor = TegraMonitor::new();
+        let breaker = ThermalCircuitBreaker::new(monitor);
+        assert!(breaker.monitor.last_stats.is_none());
     }
 
     #[test]
@@ -267,5 +370,32 @@ mod tests {
         let mut breaker = ThermalCircuitBreaker::new(monitor);
         // With placeholder returning 45°C and threshold 65°C, should be closed
         assert!(!breaker.is_open().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_guard() {
+        let monitor = TegraMonitor::new();
+        let mut breaker = ThermalCircuitBreaker::new(monitor);
+
+        let result = breaker.guard(async { Ok(42) }).await;
+        assert_eq!(result.unwrap(), 42);
+    }
+
+    #[test]
+    fn test_tegra_monitor_connect() {
+        use crate::device::{ConnectionMethod, DeviceInfo, JetsonDevice};
+
+        let device = JetsonDevice {
+            info: DeviceInfo {
+                id: "test".to_string(),
+                model: crate::JetsonModel::OrinNano8GB,
+                connection: ConnectionMethod::Usb,
+                jetpack_version: None,
+                hostname: None,
+            },
+        };
+
+        let monitor = TegraMonitor::connect(&device).unwrap();
+        assert!(monitor.last_stats.is_none());
     }
 }

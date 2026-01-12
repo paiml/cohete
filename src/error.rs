@@ -167,7 +167,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_error_display() {
+    fn test_error_device_not_found() {
+        let err = Error::DeviceNotFound("jetson-01".to_string());
+        assert!(err.to_string().contains("jetson-01"));
+    }
+
+    #[test]
+    fn test_error_connection_failed() {
+        let err = Error::ConnectionFailed {
+            host: "192.168.55.1".to_string(),
+            reason: "timeout".to_string(),
+        };
+        assert!(err.to_string().contains("192.168.55.1"));
+        assert!(err.to_string().contains("timeout"));
+    }
+
+    #[test]
+    fn test_error_ssh() {
+        let err = Error::Ssh("authentication failed".to_string());
+        assert!(err.to_string().contains("authentication"));
+    }
+
+    #[test]
+    fn test_error_usb() {
+        let err = Error::Usb("device busy".to_string());
+        assert!(err.to_string().contains("device busy"));
+    }
+
+    #[test]
+    fn test_error_thermal_exceeded() {
         let err = Error::ThermalExceeded {
             current_c: 75.0,
             threshold_c: 70.0,
@@ -177,18 +205,151 @@ mod tests {
     }
 
     #[test]
-    fn test_subsystem_display() {
-        assert_eq!(Subsystem::TegraStats.to_string(), "tegrastats");
-        assert_eq!(Subsystem::NvpModel.to_string(), "nvpmodel");
-    }
-
-    #[test]
-    fn test_memory_error() {
+    fn test_error_insufficient_memory() {
         let err = Error::InsufficientMemory {
             requested_mb: 6000,
             available_mb: 4000,
         };
         assert!(err.to_string().contains("6000"));
         assert!(err.to_string().contains("4000"));
+    }
+
+    #[test]
+    fn test_error_memory_budget_exceeded() {
+        let err = Error::MemoryBudgetExceeded {
+            used_mb: 5000,
+            budget_mb: 4000,
+        };
+        assert!(err.to_string().contains("5000"));
+        assert!(err.to_string().contains("4000"));
+    }
+
+    #[test]
+    fn test_error_power_mode() {
+        let err = Error::PowerMode("invalid mode".to_string());
+        assert!(err.to_string().contains("invalid mode"));
+    }
+
+    #[test]
+    fn test_error_storage() {
+        let err = Error::Storage("disk full".to_string());
+        assert!(err.to_string().contains("disk full"));
+    }
+
+    #[test]
+    fn test_error_config() {
+        let err = Error::Config("missing field".to_string());
+        assert!(err.to_string().contains("missing field"));
+    }
+
+    #[test]
+    fn test_error_invalid_yaml() {
+        let err = Error::InvalidYaml("syntax error".to_string());
+        assert!(err.to_string().contains("syntax error"));
+    }
+
+    #[test]
+    fn test_error_quantization() {
+        let err = Error::Quantization("unsupported format".to_string());
+        assert!(err.to_string().contains("unsupported format"));
+    }
+
+    #[test]
+    fn test_error_provisioning() {
+        let err = Error::Provisioning("failed to setup".to_string());
+        assert!(err.to_string().contains("failed to setup"));
+    }
+
+    #[test]
+    fn test_error_fleet() {
+        let err = Error::Fleet("no devices available".to_string());
+        assert!(err.to_string().contains("no devices"));
+    }
+
+    #[test]
+    fn test_error_parse() {
+        let err = Error::Parse {
+            context: "tegrastats".to_string(),
+            message: "invalid format".to_string(),
+        };
+        assert!(err.to_string().contains("tegrastats"));
+        assert!(err.to_string().contains("invalid format"));
+    }
+
+    #[test]
+    fn test_error_timeout() {
+        let err = Error::Timeout {
+            operation: "connection".to_string(),
+            timeout_ms: 5000,
+        };
+        assert!(err.to_string().contains("connection"));
+        assert!(err.to_string().contains("5000"));
+    }
+
+    #[test]
+    fn test_error_subsystem_unavailable() {
+        let err = Error::SubsystemUnavailable {
+            subsystem: Subsystem::TegraStats,
+            reason: "not installed".to_string(),
+        };
+        assert!(err.to_string().contains("TegraStats"));
+        assert!(err.to_string().contains("not installed"));
+    }
+
+    #[test]
+    fn test_error_internal() {
+        let err = Error::Internal("unexpected state".to_string());
+        assert!(err.to_string().contains("unexpected state"));
+    }
+
+    #[test]
+    fn test_error_io() {
+        let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let err = Error::Io(io_err);
+        assert!(err.to_string().contains("file not found"));
+    }
+
+    #[test]
+    fn test_error_from_io() {
+        let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
+        let err: Error = io_err.into();
+        assert!(err.to_string().contains("access denied"));
+    }
+
+    #[test]
+    fn test_subsystem_display() {
+        assert_eq!(Subsystem::TegraStats.to_string(), "tegrastats");
+        assert_eq!(Subsystem::NvpModel.to_string(), "nvpmodel");
+        assert_eq!(Subsystem::JetsonClocks.to_string(), "jetson_clocks");
+        assert_eq!(Subsystem::Nvme.to_string(), "NVMe");
+        assert_eq!(Subsystem::UsbCdc.to_string(), "USB CDC");
+        assert_eq!(Subsystem::Ssh.to_string(), "SSH");
+        assert_eq!(Subsystem::Cuda.to_string(), "CUDA");
+        assert_eq!(Subsystem::Thermal.to_string(), "Thermal");
+        assert_eq!(Subsystem::Power.to_string(), "Power");
+    }
+
+    #[test]
+    fn test_subsystem_equality() {
+        assert_eq!(Subsystem::TegraStats, Subsystem::TegraStats);
+        assert_ne!(Subsystem::TegraStats, Subsystem::NvpModel);
+    }
+
+    #[test]
+    fn test_subsystem_clone() {
+        let sub = Subsystem::Cuda;
+        let cloned = sub;
+        assert_eq!(sub, cloned);
+    }
+
+    #[test]
+    fn test_subsystem_hash() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(Subsystem::TegraStats);
+        set.insert(Subsystem::TegraStats);
+        assert_eq!(set.len(), 1);
+        set.insert(Subsystem::Cuda);
+        assert_eq!(set.len(), 2);
     }
 }

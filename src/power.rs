@@ -164,12 +164,44 @@ mod tests {
         assert_eq!(PowerMode::Maxn.mode_id(), 0);
         assert_eq!(PowerMode::Power15W.mode_id(), 1);
         assert_eq!(PowerMode::Power7W.mode_id(), 2);
+        assert_eq!(PowerMode::Custom(5).mode_id(), 5);
+    }
+
+    #[test]
+    fn test_power_mode_name() {
+        assert_eq!(PowerMode::Maxn.name(), "MAXN");
+        assert_eq!(PowerMode::Power15W.name(), "15W");
+        assert_eq!(PowerMode::Power7W.name(), "7W");
+        assert_eq!(PowerMode::Custom(10).name(), "Custom");
+    }
+
+    #[test]
+    fn test_power_mode_budget() {
+        assert_eq!(PowerMode::Maxn.power_budget_watts(), None);
+        assert_eq!(PowerMode::Power15W.power_budget_watts(), Some(15));
+        assert_eq!(PowerMode::Power7W.power_budget_watts(), Some(7));
+        assert_eq!(PowerMode::Custom(3).power_budget_watts(), None);
     }
 
     #[test]
     fn test_power_mode_display() {
         assert_eq!(PowerMode::Maxn.to_string(), "MAXN");
         assert_eq!(PowerMode::Power15W.to_string(), "15W");
+        assert_eq!(PowerMode::Power7W.to_string(), "7W");
+        assert_eq!(PowerMode::Custom(99).to_string(), "Custom");
+    }
+
+    #[test]
+    fn test_power_mode_default() {
+        assert_eq!(PowerMode::default(), PowerMode::Maxn);
+    }
+
+    #[test]
+    fn test_power_mode_equality() {
+        assert_eq!(PowerMode::Maxn, PowerMode::Maxn);
+        assert_ne!(PowerMode::Maxn, PowerMode::Power7W);
+        assert_eq!(PowerMode::Custom(5), PowerMode::Custom(5));
+        assert_ne!(PowerMode::Custom(5), PowerMode::Custom(6));
     }
 
     #[test]
@@ -178,13 +210,65 @@ mod tests {
         assert!(!clocks.is_enabled());
         clocks.enable().unwrap();
         assert!(clocks.is_enabled());
+        clocks.disable().unwrap();
+        assert!(!clocks.is_enabled());
     }
 
     #[test]
-    fn test_power_profiles() {
-        let max = PowerProfile::max_performance();
-        assert_eq!(max.mode, PowerMode::Maxn);
-        assert!(max.enable_clocks);
-        assert_eq!(max.fan_speed, 255);
+    fn test_jetson_clocks_default() {
+        let clocks = JetsonClocks::default();
+        assert!(!clocks.is_enabled());
+    }
+
+    #[test]
+    fn test_power_profile_max_performance() {
+        let profile = PowerProfile::max_performance();
+        assert_eq!(profile.mode, PowerMode::Maxn);
+        assert!(profile.enable_clocks);
+        assert_eq!(profile.fan_speed, 255);
+    }
+
+    #[test]
+    fn test_power_profile_balanced() {
+        let profile = PowerProfile::balanced();
+        assert_eq!(profile.mode, PowerMode::Power15W);
+        assert!(!profile.enable_clocks);
+        assert_eq!(profile.fan_speed, 128);
+    }
+
+    #[test]
+    fn test_power_profile_power_saver() {
+        let profile = PowerProfile::power_saver();
+        assert_eq!(profile.mode, PowerMode::Power7W);
+        assert!(!profile.enable_clocks);
+        assert_eq!(profile.fan_speed, 64);
+    }
+
+    #[test]
+    fn test_power_profile_default() {
+        let profile = PowerProfile::default();
+        assert_eq!(profile.mode, PowerMode::Power15W);
+        assert!(!profile.enable_clocks);
+        assert_eq!(profile.fan_speed, 128);
+    }
+
+    #[test]
+    fn test_power_profile_clone() {
+        let profile = PowerProfile::max_performance();
+        let cloned = profile.clone();
+        assert_eq!(cloned.mode, profile.mode);
+        assert_eq!(cloned.enable_clocks, profile.enable_clocks);
+        assert_eq!(cloned.fan_speed, profile.fan_speed);
+    }
+
+    #[test]
+    fn test_power_mode_hash() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(PowerMode::Maxn);
+        set.insert(PowerMode::Maxn);
+        assert_eq!(set.len(), 1);
+        set.insert(PowerMode::Power7W);
+        assert_eq!(set.len(), 2);
     }
 }

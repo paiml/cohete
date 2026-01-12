@@ -38,9 +38,18 @@ Cohete integrates with the Sovereign AI Stack to provide:
 | Device Discovery | USB CDC, mDNS, SSH | `repartir` remote executor |
 | Thermal Monitoring | tegrastats parsing | `renacer` tracing |
 | Memory Budgeting | VRAM tracking, auto-quantization | `pacha` model registry |
+| ZRAM Optimization | Kernel-cooperative ZRAM | `trueno-ublk` performance |
 | ARM NEON Compute | trueno backend selection | `trueno` SIMD dispatch |
 | Fleet Orchestration | Multi-device scheduling | `batuta` orchestration |
 | Provisioning | Declarative YAML config | Zero-code setup |
+
+### 1.3 Performance Honesty (Genchi Genbutsu)
+
+In alignment with the Sovereign AI Stack's commitment to truth over hype, Cohete acknowledges the current performance characteristics of Jetson Orin Nano hardware:
+
+- **GPU MATVEC Overhead**: Single-request inference on Orin Nano GPU is currently bottlenecked by kernel launch overhead and MATVEC performance (e.g., 0.84 tok/s vs 5.33 tok/s on CPU SIMD).
+- **CPU Preference**: For low-batch, high-latency-sensitive workloads, Cohete's `BackendSelector` may prefer `trueno/neon` (CPU) over `trueno/cuda` (GPU) until kernel optimizations reach parity.
+- **Batching Advantage**: GPU performance is expected to scale better with larger batch sizes (WIP via `batuta`).
 
 ---
 
@@ -50,8 +59,8 @@ Cohete integrates with the Sovereign AI Stack to provide:
 
 | Device | Module | Memory | GPU | TOPS | Status |
 |--------|--------|--------|-----|------|--------|
-| Jetson Orin Nano 4GB | `orin_nano` | 4GB LPDDR5 | 512 CUDA | 20 | Primary |
-| Jetson Orin Nano 8GB | `orin_nano` | 8GB LPDDR5 | 1024 CUDA | 40 | Primary |
+| Jetson Orin Nano 4GB | `orin_nano` | 4GB LPDDR5 | 512 CUDA | 20 | Primary (JetPack 6.x) |
+| Jetson Orin Nano 8GB | `orin_nano` | 8GB LPDDR5 | 1024 CUDA | 40 | Primary (JetPack 6.x) |
 | Jetson Orin NX 8GB | `orin_nx` | 8GB LPDDR5 | 1024 CUDA | 70 | Supported |
 | Jetson Orin NX 16GB | `orin_nx` | 16GB LPDDR5 | 1024 CUDA | 100 | Supported |
 | Jetson AGX Orin 32GB | `agx_orin` | 32GB LPDDR5 | 2048 CUDA | 200 | Planned |
@@ -67,6 +76,7 @@ Cohete integrates with the Sovereign AI Stack to provide:
 | Power Modes | `nvpmodel` | MAXN/15W/7W selection | `PowerMode` |
 | Jetson Clocks | `clocks` | Frequency control | `JetsonClocks` |
 | Thermal Zones | `thermal` | Temperature monitoring | `ThermalZone` |
+| ZRAM | `zram` | Compressed RAM swap | `ZramConfig` |
 | NVMe Storage | `storage` | SSD management | `NvmeDevice` |
 | USB CDC | `usb` | Serial console access | `UsbCdc` |
 | CUDA Restricted | `cuda` | Limited GPU compute | `CudaDevice` |
@@ -404,6 +414,31 @@ impl MemoryBudget {
 }
 ```
 
+### 5.4 GPU Kernel Safety (Error 700 Mitigation)
+
+To handle non-deterministic GPU kernel failures (e.g., CUDA Error 700: Launch Failure), Cohete implements a GPU health monitor:
+
+```rust
+pub struct GpuHealthMonitor {
+    error_count: AtomicU32,
+    max_errors: u32,
+    fallback_threshold: u32,
+}
+
+impl GpuHealthMonitor {
+    /// Jidoka: If GPU kernels fail repeatedly, force fallback to CPU SIMD
+    pub fn record_error(&self, error: &Error) -> HealthStatus {
+        if error.is_cuda_launch_failure() {
+            let count = self.error_count.fetch_add(1, Ordering::SeqCst);
+            if count >= self.fallback_threshold {
+                return HealthStatus::DegradedFallbackToCpu;
+            }
+        }
+        HealthStatus::Healthy
+    }
+}
+```
+
 ---
 
 ## Part VI: Declarative Configuration (Architectural Invariant)
@@ -463,9 +498,14 @@ inference:
   max_batch_size: 4
   context_length: 2048
   api_compatibility: openai  # OpenAI-compatible API
+  backend_preference: cpu_simd # Default to CPU due to current GPU MATVEC overhead
 
 # Provisioning (initial setup)
 provision:
+  zram:
+    enabled: true
+    priority: 100
+    compression_algorithm: zstd
   nvme:
     enabled: true
     mount_point: /mnt/nvme

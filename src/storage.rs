@@ -122,17 +122,86 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_swap_config_default() {
+    fn test_swap_config_default_ml() {
         let config = SwapConfig::default_ml();
+        assert_eq!(config.size_gb, 16);
+        assert_eq!(config.swappiness, 10);
+        assert_eq!(config.path, PathBuf::from("/mnt/nvme/swapfile"));
+    }
+
+    #[test]
+    fn test_swap_config_default() {
+        let config = SwapConfig::default();
         assert_eq!(config.size_gb, 16);
         assert_eq!(config.swappiness, 10);
     }
 
     #[test]
-    fn test_storage_layout() {
+    fn test_swap_config_clone() {
+        let config = SwapConfig {
+            path: PathBuf::from("/custom/swap"),
+            size_gb: 32,
+            swappiness: 5,
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.size_gb, 32);
+        assert_eq!(cloned.swappiness, 5);
+        assert_eq!(cloned.path, PathBuf::from("/custom/swap"));
+    }
+
+    #[test]
+    fn test_storage_layout_default() {
+        let layout = StorageLayout::default();
+        assert_eq!(layout.nvme_mount, PathBuf::from("/mnt/nvme"));
+        assert_eq!(layout.models_dir, PathBuf::from("/mnt/nvme/models"));
+        assert_eq!(layout.data_dir, PathBuf::from("/mnt/nvme/data"));
+        assert_eq!(layout.cache_dir, PathBuf::from("/mnt/nvme/cache"));
+        assert_eq!(layout.docker_dir, Some(PathBuf::from("/mnt/nvme/docker")));
+    }
+
+    #[test]
+    fn test_storage_layout_default_layout() {
         let layout = StorageLayout::default_layout();
         assert_eq!(layout.nvme_mount, PathBuf::from("/mnt/nvme"));
         assert_eq!(layout.models_dir, PathBuf::from("/mnt/nvme/models"));
+    }
+
+    #[test]
+    fn test_storage_layout_clone() {
+        let layout = StorageLayout::default();
+        let cloned = layout.clone();
+        assert_eq!(cloned.nvme_mount, layout.nvme_mount);
+        assert_eq!(cloned.models_dir, layout.models_dir);
+    }
+
+    #[test]
+    fn test_nvme_device_detect() {
+        let result = NvmeDevice::detect();
+        assert!(result.is_ok());
+        // Placeholder returns None
+        assert!(result.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_nvme_device_capacity_gb() {
+        let nvme = NvmeDevice {
+            device_path: PathBuf::from("/dev/nvme0n1"),
+            mount_point: PathBuf::from("/mnt/nvme"),
+            capacity_bytes: 512 * 1024 * 1024 * 1024, // 512GB
+            available_bytes: 256 * 1024 * 1024 * 1024,
+        };
+        assert_eq!(nvme.capacity_gb(), 512);
+    }
+
+    #[test]
+    fn test_nvme_device_available_gb() {
+        let nvme = NvmeDevice {
+            device_path: PathBuf::from("/dev/nvme0n1"),
+            mount_point: PathBuf::from("/mnt/nvme"),
+            capacity_bytes: 512 * 1024 * 1024 * 1024,
+            available_bytes: 256 * 1024 * 1024 * 1024, // 256GB free
+        };
+        assert_eq!(nvme.available_gb(), 256);
     }
 
     #[test]
@@ -144,5 +213,27 @@ mod tests {
             available_bytes: 250 * 1024 * 1024 * 1024, // 250GB free
         };
         assert!((nvme.utilization_percent() - 50.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_nvme_utilization_empty() {
+        let nvme = NvmeDevice {
+            device_path: PathBuf::from("/dev/nvme0n1"),
+            mount_point: PathBuf::from("/mnt/nvme"),
+            capacity_bytes: 0,
+            available_bytes: 0,
+        };
+        assert_eq!(nvme.utilization_percent(), 0.0);
+    }
+
+    #[test]
+    fn test_nvme_utilization_full() {
+        let nvme = NvmeDevice {
+            device_path: PathBuf::from("/dev/nvme0n1"),
+            mount_point: PathBuf::from("/mnt/nvme"),
+            capacity_bytes: 100 * 1024 * 1024 * 1024,
+            available_bytes: 0,
+        };
+        assert!((nvme.utilization_percent() - 100.0).abs() < 0.1);
     }
 }

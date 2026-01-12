@@ -212,12 +212,81 @@ impl Default for DeploymentConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::device::{ConnectionMethod, DeviceInfo};
+
+    fn make_test_device(id: &str, model: crate::JetsonModel) -> JetsonDevice {
+        JetsonDevice {
+            info: DeviceInfo {
+                id: id.to_string(),
+                model,
+                connection: ConnectionMethod::Usb,
+                jetpack_version: None,
+                hostname: None,
+            },
+        }
+    }
 
     #[test]
     fn test_fleet_empty() {
         let fleet = Fleet::new();
         assert!(fleet.is_empty());
         assert_eq!(fleet.len(), 0);
+        assert_eq!(fleet.enabled_count(), 0);
+    }
+
+    #[test]
+    fn test_fleet_add_device() {
+        let mut fleet = Fleet::new();
+        let device = make_test_device("jetson-01", crate::JetsonModel::OrinNano8GB);
+        fleet.add_device(device, ThermalPolicy::conservative()).unwrap();
+        assert_eq!(fleet.len(), 1);
+        assert!(!fleet.is_empty());
+        assert_eq!(fleet.enabled_count(), 1);
+    }
+
+    #[test]
+    fn test_fleet_remove_device() {
+        let mut fleet = Fleet::new();
+        let device = make_test_device("jetson-01", crate::JetsonModel::OrinNano8GB);
+        fleet.add_device(device, ThermalPolicy::conservative()).unwrap();
+        assert_eq!(fleet.len(), 1);
+
+        let removed = fleet.remove_device("jetson-01");
+        assert!(removed.is_some());
+        assert!(fleet.is_empty());
+
+        let not_found = fleet.remove_device("nonexistent");
+        assert!(not_found.is_none());
+    }
+
+    #[test]
+    fn test_fleet_get_device() {
+        let mut fleet = Fleet::new();
+        let device = make_test_device("jetson-02", crate::JetsonModel::OrinNX16GB);
+        fleet.add_device(device, ThermalPolicy::aggressive()).unwrap();
+
+        let member = fleet.get("jetson-02");
+        assert!(member.is_some());
+        assert!(member.unwrap().enabled);
+
+        let not_found = fleet.get("nonexistent");
+        assert!(not_found.is_none());
+    }
+
+    #[test]
+    fn test_fleet_devices_iterator() {
+        let mut fleet = Fleet::new();
+        fleet.add_device(
+            make_test_device("j1", crate::JetsonModel::OrinNano4GB),
+            ThermalPolicy::conservative()
+        ).unwrap();
+        fleet.add_device(
+            make_test_device("j2", crate::JetsonModel::OrinNano8GB),
+            ThermalPolicy::aggressive()
+        ).unwrap();
+
+        let count = fleet.devices().count();
+        assert_eq!(count, 2);
     }
 
     #[test]
@@ -225,7 +294,44 @@ mod tests {
         let fleet = Fleet::new();
         let health = fleet.health_status();
         assert_eq!(health.total_devices, 0);
+        assert_eq!(health.enabled_devices, 0);
+        assert_eq!(health.healthy_devices, 0);
+        assert_eq!(health.degraded_devices, 0);
+        assert_eq!(health.offline_devices, 0);
         assert_eq!(health.health_percent(), 100.0);
+    }
+
+    #[test]
+    fn test_fleet_health_with_devices() {
+        let mut fleet = Fleet::new();
+        fleet.add_device(
+            make_test_device("j1", crate::JetsonModel::OrinNano8GB),
+            ThermalPolicy::conservative()
+        ).unwrap();
+        fleet.add_device(
+            make_test_device("j2", crate::JetsonModel::OrinNano8GB),
+            ThermalPolicy::conservative()
+        ).unwrap();
+
+        let health = fleet.health_status();
+        assert_eq!(health.total_devices, 2);
+        assert_eq!(health.enabled_devices, 2);
+        assert_eq!(health.healthy_devices, 2);
+        assert_eq!(health.health_percent(), 100.0);
+    }
+
+    #[test]
+    fn test_fleet_health_clone() {
+        let health = FleetHealth {
+            total_devices: 5,
+            enabled_devices: 4,
+            healthy_devices: 3,
+            degraded_devices: 1,
+            offline_devices: 1,
+        };
+        let cloned = health.clone();
+        assert_eq!(cloned.total_devices, 5);
+        assert!((cloned.health_percent() - 60.0).abs() < 0.001);
     }
 
     #[test]
@@ -233,5 +339,56 @@ mod tests {
         let config = DeploymentConfig::default();
         assert_eq!(config.quantization, Some("q4_0".to_string()));
         assert_eq!(config.memory_budget_mb, 6000);
+        assert!(config.target_devices.is_empty());
+    }
+
+    #[test]
+    fn test_deployment_config_clone() {
+        let config = DeploymentConfig {
+            target_devices: vec!["j1".to_string(), "j2".to_string()],
+            quantization: Some("q8_0".to_string()),
+            memory_budget_mb: 4000,
+            thermal_policy: ThermalPolicy::aggressive(),
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.target_devices.len(), 2);
+        assert_eq!(cloned.quantization, Some("q8_0".to_string()));
+    }
+
+    #[test]
+    fn test_fleet_member_fields() {
+        let mut fleet = Fleet::new();
+        let device = make_test_device("j1", crate::JetsonModel::AgxOrin64GB);
+        fleet.add_device(device, ThermalPolicy::aggressive()).unwrap();
+
+        let member = fleet.get("j1").unwrap();
+        assert!(member.enabled);
+        assert_eq!(member.policy.threshold_c, 75.0);
+        assert_eq!(member.device.id(), "j1");
+    }
+
+    #[tokio::test]
+    async fn test_fleet_deploy_model() {
+        let fleet = Fleet::new();
+        let result = fleet.deploy_model(&[1, 2, 3]).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_fleet_start_inference_servers() {
+        let fleet = Fleet::new();
+        let result = fleet.start_inference_servers().await;
+        assert!(result.is_ok());
+    }
+
+    #[cfg(feature = "batuta")]
+    #[test]
+    fn test_jetson_executor() {
+        let executor = JetsonExecutor::new("192.168.1.100")
+            .with_thermal_policy(ThermalPolicy::aggressive())
+            .with_memory_budget_mb(4000);
+        assert_eq!(executor.ip, "192.168.1.100");
+        assert_eq!(executor.memory_budget_mb, 4000);
+        assert_eq!(executor.policy.threshold_c, 75.0);
     }
 }

@@ -41,7 +41,8 @@ pub struct DeviceInfo {
 /// Handle to a connected Jetson device.
 #[derive(Debug)]
 pub struct JetsonDevice {
-    info: DeviceInfo,
+    /// Device information (crate-visible for testing)
+    pub(crate) info: DeviceInfo,
     // SSH session would be stored here
 }
 
@@ -177,10 +178,43 @@ pub struct ComputeHint {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::net::Ipv4Addr;
 
     #[test]
     fn test_connection_method_default() {
         assert_eq!(ConnectionMethod::default(), ConnectionMethod::Usb);
+    }
+
+    #[test]
+    fn test_connection_method_ethernet() {
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
+        let method = ConnectionMethod::Ethernet(ip);
+        assert_eq!(method, ConnectionMethod::Ethernet(ip));
+    }
+
+    #[test]
+    fn test_connection_method_mdns() {
+        let method = ConnectionMethod::Mdns("jetson.local".to_string());
+        if let ConnectionMethod::Mdns(host) = method {
+            assert_eq!(host, "jetson.local");
+        } else {
+            panic!("Expected Mdns variant");
+        }
+    }
+
+    #[test]
+    fn test_device_info_creation() {
+        let info = DeviceInfo {
+            id: "jetson-01".to_string(),
+            model: JetsonModel::OrinNano8GB,
+            connection: ConnectionMethod::Usb,
+            jetpack_version: Some("5.1.1".to_string()),
+            hostname: Some("jetson-nano".to_string()),
+        };
+        assert_eq!(info.id, "jetson-01");
+        assert_eq!(info.model, JetsonModel::OrinNano8GB);
+        assert_eq!(info.jetpack_version, Some("5.1.1".to_string()));
+        assert_eq!(info.hostname, Some("jetson-nano".to_string()));
     }
 
     #[test]
@@ -196,5 +230,133 @@ mod tests {
         let hint = device.compute_hint();
         assert!(hint.prefer_neon);
         assert_eq!(hint.memory_budget_mb, 4096);
+        assert!(hint.cuda_available);
+    }
+
+    #[test]
+    fn test_device_id() {
+        let info = DeviceInfo {
+            id: "my-jetson".to_string(),
+            model: JetsonModel::OrinNX16GB,
+            connection: ConnectionMethod::Usb,
+            jetpack_version: None,
+            hostname: None,
+        };
+        let device = JetsonDevice { info };
+        assert_eq!(device.id(), "my-jetson");
+    }
+
+    #[test]
+    fn test_device_model() {
+        let info = DeviceInfo {
+            id: "test".to_string(),
+            model: JetsonModel::AgxOrin64GB,
+            connection: ConnectionMethod::Usb,
+            jetpack_version: None,
+            hostname: None,
+        };
+        let device = JetsonDevice { info };
+        assert_eq!(device.model(), JetsonModel::AgxOrin64GB);
+    }
+
+    #[test]
+    fn test_device_info_accessor() {
+        let info = DeviceInfo {
+            id: "test-device".to_string(),
+            model: JetsonModel::OrinNano4GB,
+            connection: ConnectionMethod::Usb,
+            jetpack_version: Some("6.0".to_string()),
+            hostname: None,
+        };
+        let device = JetsonDevice { info };
+        let retrieved = device.info();
+        assert_eq!(retrieved.id, "test-device");
+        assert_eq!(retrieved.model, JetsonModel::OrinNano4GB);
+    }
+
+    #[tokio::test]
+    async fn test_discover_usb() {
+        let device = JetsonDevice::discover_usb().await.unwrap();
+        assert_eq!(device.id(), "jetson-usb");
+        assert_eq!(device.info().connection, ConnectionMethod::Usb);
+    }
+
+    #[tokio::test]
+    async fn test_discover_mdns() {
+        let devices = JetsonDevice::discover_mdns().await.unwrap();
+        // Placeholder returns empty vec
+        assert!(devices.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_discover_all() {
+        let devices = JetsonDevice::discover_all().await.unwrap();
+        // Should have at least the USB device
+        assert!(!devices.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_connect() {
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 55, 1));
+        let device = JetsonDevice::connect(ip).await.unwrap();
+        assert_eq!(device.id(), "jetson-192.168.55.1");
+        if let ConnectionMethod::Ethernet(addr) = device.info().connection {
+            assert_eq!(addr, ip);
+        } else {
+            panic!("Expected Ethernet connection");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_available_memory() {
+        let info = DeviceInfo {
+            id: "test".to_string(),
+            model: JetsonModel::OrinNano8GB,
+            connection: ConnectionMethod::Usb,
+            jetpack_version: None,
+            hostname: None,
+        };
+        let device = JetsonDevice { info };
+        let mem = device.available_memory_mb().await.unwrap();
+        assert_eq!(mem, 4096); // Half of 8192
+    }
+
+    #[tokio::test]
+    async fn test_exec_not_implemented() {
+        let info = DeviceInfo {
+            id: "test".to_string(),
+            model: JetsonModel::Unknown,
+            connection: ConnectionMethod::Usb,
+            jetpack_version: None,
+            hostname: None,
+        };
+        let device = JetsonDevice { info };
+        let result = device.exec("ls -la").await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_compute_hint_all_models() {
+        for model in [
+            JetsonModel::OrinNano4GB,
+            JetsonModel::OrinNano8GB,
+            JetsonModel::OrinNX8GB,
+            JetsonModel::OrinNX16GB,
+            JetsonModel::AgxOrin32GB,
+            JetsonModel::AgxOrin64GB,
+            JetsonModel::Unknown,
+        ] {
+            let info = DeviceInfo {
+                id: "test".to_string(),
+                model,
+                connection: ConnectionMethod::Usb,
+                jetpack_version: None,
+                hostname: None,
+            };
+            let device = JetsonDevice { info };
+            let hint = device.compute_hint();
+            assert!(hint.prefer_neon);
+            assert_eq!(hint.memory_budget_mb, model.memory_mb() / 2);
+        }
     }
 }

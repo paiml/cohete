@@ -187,20 +187,165 @@ mod tests {
         let config = ProvisionConfig::default();
         assert!(config.nvme.enabled);
         assert_eq!(config.nvme.swap_size_gb, 16);
+        assert!(!config.packages.is_empty());
+        assert!(config.packages.contains(&"nvtop".to_string()));
     }
 
     #[test]
-    fn test_ssh_config_entry() {
+    fn test_provision_config_clone() {
+        let config = ProvisionConfig::default();
+        let cloned = config.clone();
+        assert_eq!(cloned.packages.len(), config.packages.len());
+        assert_eq!(cloned.nvme.swap_size_gb, config.nvme.swap_size_gb);
+    }
+
+    #[test]
+    fn test_nvme_provision_config_default() {
+        let config = NvmeProvisionConfig::default();
+        assert!(config.enabled);
+        assert_eq!(config.mount_point, PathBuf::from("/mnt/nvme"));
+        assert_eq!(config.swap_size_gb, 16);
+    }
+
+    #[test]
+    fn test_nvme_provision_config_clone() {
+        let config = NvmeProvisionConfig {
+            enabled: false,
+            mount_point: PathBuf::from("/custom"),
+            swap_size_gb: 32,
+        };
+        let cloned = config.clone();
+        assert!(!cloned.enabled);
+        assert_eq!(cloned.swap_size_gb, 32);
+    }
+
+    #[test]
+    fn test_ssh_provision_config_default() {
+        let config = SshProvisionConfig::default();
+        assert!(config.copy_id);
+        assert_eq!(config.config_host, "jetson");
+        assert_eq!(config.username, "nvidia");
+    }
+
+    #[test]
+    fn test_ssh_provision_config_clone() {
+        let config = SshProvisionConfig {
+            copy_id: false,
+            config_host: "custom-host".to_string(),
+            username: "admin".to_string(),
+        };
+        let cloned = config.clone();
+        assert!(!cloned.copy_id);
+        assert_eq!(cloned.config_host, "custom-host");
+    }
+
+    #[test]
+    fn test_ssh_config_entry_usb() {
         let entry = SshConfigEntry::usb("nvidia");
+        assert_eq!(entry.host, "jetson-usb");
         assert_eq!(entry.hostname, "192.168.55.1");
+        assert_eq!(entry.user, "nvidia");
+        assert!(entry.identity_file.is_none());
+    }
+
+    #[test]
+    fn test_ssh_config_entry_ethernet() {
+        let entry = SshConfigEntry::ethernet("192.168.1.100", "admin");
+        assert_eq!(entry.host, "jetson-eth");
+        assert_eq!(entry.hostname, "192.168.1.100");
+        assert_eq!(entry.user, "admin");
+    }
+
+    #[test]
+    fn test_ssh_config_entry_to_config_block() {
+        let entry = SshConfigEntry::usb("nvidia");
         let block = entry.to_config_block();
         assert!(block.contains("Host jetson-usb"));
-        assert!(block.contains("192.168.55.1"));
+        assert!(block.contains("HostName 192.168.55.1"));
+        assert!(block.contains("User nvidia"));
     }
 
     #[test]
-    fn test_setup_wizard() {
+    fn test_ssh_config_entry_with_identity_file() {
+        let entry = SshConfigEntry {
+            host: "jetson".to_string(),
+            hostname: "192.168.55.1".to_string(),
+            user: "nvidia".to_string(),
+            identity_file: Some(PathBuf::from("/home/user/.ssh/jetson_key")),
+        };
+        let block = entry.to_config_block();
+        assert!(block.contains("IdentityFile /home/user/.ssh/jetson_key"));
+    }
+
+    #[test]
+    fn test_ssh_config_entry_clone() {
+        let entry = SshConfigEntry::usb("test");
+        let cloned = entry.clone();
+        assert_eq!(cloned.host, entry.host);
+        assert_eq!(cloned.hostname, entry.hostname);
+    }
+
+    #[test]
+    fn test_setup_wizard_new() {
         let wizard = SetupWizard::new();
         assert!(wizard.config.nvme.enabled);
+    }
+
+    #[test]
+    fn test_setup_wizard_default() {
+        let wizard = SetupWizard::default();
+        assert!(wizard.config.nvme.enabled);
+    }
+
+    #[test]
+    fn test_setup_wizard_with_config() {
+        let config = ProvisionConfig {
+            nvme: NvmeProvisionConfig {
+                enabled: false,
+                mount_point: PathBuf::from("/custom"),
+                swap_size_gb: 8,
+            },
+            ssh: SshProvisionConfig::default(),
+            packages: vec![],
+        };
+        let wizard = SetupWizard::new().with_config(config);
+        assert!(!wizard.config.nvme.enabled);
+        assert_eq!(wizard.config.nvme.swap_size_gb, 8);
+    }
+
+    #[tokio::test]
+    async fn test_setup_wizard_run() {
+        let wizard = SetupWizard::new();
+        let result = wizard.run().await.unwrap();
+        assert!(result.ssh_configured);
+        assert!(result.nvme_configured);
+        assert!(!result.packages_installed.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_setup_wizard_run_no_nvme() {
+        let config = ProvisionConfig {
+            nvme: NvmeProvisionConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let wizard = SetupWizard::new().with_config(config);
+        let result = wizard.run().await.unwrap();
+        assert!(!result.nvme_configured);
+    }
+
+    #[test]
+    fn test_provision_result_fields() {
+        let result = ProvisionResult {
+            ssh_configured: true,
+            nvme_configured: true,
+            packages_installed: vec!["htop".to_string()],
+            storage_layout: StorageLayout::default(),
+        };
+        assert!(result.ssh_configured);
+        assert!(result.nvme_configured);
+        assert_eq!(result.packages_installed.len(), 1);
     }
 }
