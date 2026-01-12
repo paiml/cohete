@@ -1,0 +1,104 @@
+[package]
+name = "cohete"
+version = "0.1.0"
+edition = "2021"
+authors = ["PAIML <team@paiml.com>"]
+license = "MIT"
+description = "NVIDIA Jetson edge hardware integration for the Sovereign AI Stack"
+repository = "https://github.com/paiml/cohete"
+documentation = "https://docs.rs/cohete"
+readme = "README.md"
+keywords = ["jetson", "nvidia", "edge", "ai", "embedded"]
+categories = ["hardware-support", "embedded", "science"]
+rust-version = "1.75"
+
+[features]
+default = []
+
+# Hardware feature flags (following manzana pattern)
+arm-neon = []                      # ARM NEON SIMD (auto-detected by trueno)
+tegra-stats = []                   # tegrastats monitoring
+cuda-restricted = []               # Limited Jetson CUDA support
+nvme = []                          # NVMe storage management
+
+# Integration features
+batuta = ["dep:repartir", "dep:pacha", "dep:renacer"]
+cli = ["dep:clap", "dep:indicatif"]
+
+# Full feature set
+full = ["arm-neon", "tegra-stats", "cuda-restricted", "nvme", "batuta", "cli"]
+
+[dependencies]
+# Core compute foundation - REQUIRED
+trueno = "0.11"
+
+# Error handling
+thiserror = "2.0"
+
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+
+# Serialization (YAML config)
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+
+# SSH connectivity
+russh = "0.48"
+russh-keys = "0.48"
+
+# USB device detection
+rusb = "0.9"
+
+# mDNS discovery
+mdns-sd = "0.11"
+
+# Tracing/observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Optional: Batuta stack integration
+repartir = { version = "2.0", optional = true }
+pacha = { version = "0.2", optional = true }
+renacer = { version = "0.9", optional = true }
+
+# Optional: CLI
+clap = { version = "4.5", features = ["derive"], optional = true }
+indicatif = { version = "0.17", optional = true }
+
+[dev-dependencies]
+# Testing
+proptest = "1.5"
+tokio-test = "0.4"
+tempfile = "3.14"
+insta = { version = "1.41", features = ["yaml"] }
+
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# [[bin]]
+# name = "cohete"
+# path = "src/bin/main.rs"
+# required-features = ["cli"]
+
+# [[bench]]
+# name = "thermal_monitoring"
+# harness = false
+
+# [[bench]]
+# name = "device_discovery"
+# harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
