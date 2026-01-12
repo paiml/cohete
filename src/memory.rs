@@ -46,6 +46,39 @@ impl MemoryBudget {
         Self::new(4096, 1024)
     }
 
+    /// Create budget for Jetson Orin NX 16GB.
+    #[must_use]
+    pub fn orin_nx_16gb() -> Self {
+        Self::new(16384, 2048)
+    }
+
+    /// Create budget for Jetson AGX Orin 32GB.
+    #[must_use]
+    pub fn agx_orin_32gb() -> Self {
+        Self::new(32768, 4096)
+    }
+
+    /// Create budget for Jetson AGX Orin 64GB.
+    #[must_use]
+    pub fn agx_orin_64gb() -> Self {
+        Self::new(65536, 8192)
+    }
+
+    /// Get total memory in MB.
+    #[must_use]
+    pub fn total_mb(&self) -> u64 {
+        self.total_mb
+    }
+
+    /// Allocate memory with a label.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Error::InsufficientMemory` if allocation would exceed budget.
+    pub fn allocate(&self, size_mb: u64, _label: &str) -> Result<MemoryGuard<'_>> {
+        self.try_allocate(size_mb)
+    }
+
     /// Get available memory in MB.
     #[must_use]
     pub fn available_mb(&self) -> u64 {
@@ -154,6 +187,25 @@ impl ModelMemoryEstimate {
             kv_cache_per_token_kb,
             max_context,
         }
+    }
+
+    /// Create estimate from parameter count (assumes F16).
+    #[must_use]
+    pub fn from_params(params: u64) -> Self {
+        let params_billions = params as f64 / 1e9;
+        Self::for_params(params_billions, 16, 2048)
+    }
+
+    /// Get F16 model size in MB.
+    #[must_use]
+    pub fn f16_size_mb(&self) -> u64 {
+        self.weights_mb
+    }
+
+    /// Get quantized model size in MB.
+    #[must_use]
+    pub fn quantized_size_mb(&self, level: crate::quantize::QuantLevel) -> u64 {
+        (self.weights_mb as f32 * level.memory_factor()) as u64
     }
 
     /// Total memory for given context length.

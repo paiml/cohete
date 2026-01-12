@@ -1,0 +1,28 @@
+[book]
+title = "Cohete: NVIDIA Jetson Edge Hardware Integration"
+authors = ["PAIML Team"]
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "../../target/book"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "coal"
+git-repository-url = "https://github.com/paiml/cohete"
+edit-url-template = "https://github.com/paiml/cohete/edit/main/docs/book/{path}"
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.playground]
+editable = true
+line-numbers = true
+
+[output.html.search]
+enable = true
+limit-results = 20
+use-hierarchical-indexes = true

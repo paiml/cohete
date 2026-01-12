@@ -41,8 +41,8 @@ pub struct DeviceInfo {
 /// Handle to a connected Jetson device.
 #[derive(Debug)]
 pub struct JetsonDevice {
-    /// Device information (crate-visible for testing)
-    pub(crate) info: DeviceInfo,
+    /// Device information
+    pub info: DeviceInfo,
     // SSH session would be stored here
 }
 
