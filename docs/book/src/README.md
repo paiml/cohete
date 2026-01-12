@@ -1,5 +1,7 @@
 # Cohete: NVIDIA Jetson Edge Hardware Integration
 
+![Cohete - NVIDIA Jetson Edge Hardware Integration](assets/hero.svg)
+
 **Cohete** (Spanish: "rocket") provides safe, pure Rust interfaces to NVIDIA Jetson edge hardware for the Sovereign AI Stack.
 
 ## Overview

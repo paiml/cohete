@@ -2,7 +2,12 @@
 
 [![Crates.io](https://img.shields.io/crates/v/cohete.svg)](https://crates.io/crates/cohete)
 [![Documentation](https://docs.rs/cohete/badge.svg)](https://docs.rs/cohete)
+[![Book](https://img.shields.io/badge/book-paiml.github.io%2Fcohete-blue)](https://paiml.github.io/cohete)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<p align="center">
+  <img src="docs/book/src/assets/hero.svg" alt="Cohete - NVIDIA Jetson Edge Hardware Integration" width="600">
+</p>
 
 **Cohete** (Spanish: "rocket") provides safe, pure Rust interfaces to NVIDIA Jetson edge hardware for the [Sovereign AI Stack](https://github.com/paiml/batuta).
 

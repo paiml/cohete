@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <defs>
+    <!-- NVIDIA Green Gradient -->
+    <linearGradient id="nvGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#76b900"/>
+      <stop offset="100%" style="stop-color:#4a7c00"/>
+    </linearGradient>
+    <!-- Rocket Body Gradient -->
+    <linearGradient id="rocketBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2d3748"/>
+      <stop offset="50%" style="stop-color:#4a5568"/>
+      <stop offset="100%" style="stop-color:#2d3748"/>
+    </linearGradient>
+    <!-- Flame Gradient -->
+    <linearGradient id="flame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#76b900"/>
+      <stop offset="40%" style="stop-color:#f6ad55"/>
+      <stop offset="70%" style="stop-color:#ed8936"/>
+      <stop offset="100%" style="stop-color:#dd6b20"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="400" fill="#1a202c"/>
+
+  <!-- Stars -->
+  <g fill="#e2e8f0" opacity="0.6">
+    <circle cx="50" cy="50" r="1.5"/>
+    <circle cx="150" cy="80" r="1"/>
+    <circle cx="250" cy="30" r="1.5"/>
+    <circle cx="100" cy="150" r="1"/>
+    <circle cx="700" cy="60" r="1.5"/>
+    <circle cx="750" cy="120" r="1"/>
+    <circle cx="650" cy="40" r="1"/>
+    <circle cx="600" cy="100" r="1.5"/>
+    <circle cx="720" cy="180" r="1"/>
+    <circle cx="80" cy="280" r="1"/>
+    <circle cx="180" cy="350" r="1.5"/>
+    <circle cx="620" cy="320" r="1"/>
+    <circle cx="680" cy="280" r="1.5"/>
+    <circle cx="550" cy="350" r="1"/>
+  </g>
+
+  <!-- Rocket Group -->
+  <g transform="translate(280, 80)">
+    <!-- Rocket flame -->
+    <path d="M120,220 Q100,280 80,320 Q120,290 120,290 Q120,290 160,320 Q140,280 120,220"
+          fill="url(#flame)" filter="url(#glow)"/>
+
+    <!-- Rocket fins -->
+    <path d="M70,180 L40,220 L70,200 Z" fill="url(#nvGreen)"/>
+    <path d="M170,180 L200,220 L170,200 Z" fill="url(#nvGreen)"/>
+
+    <!-- Rocket body -->
+    <path d="M80,60 L80,200 L160,200 L160,60 Q120,0 80,60"
+          fill="url(#rocketBody)" stroke="#76b900" stroke-width="2"/>
+
+    <!-- Window -->
+    <circle cx="120" cy="90" r="20" fill="#1a202c" stroke="#76b900" stroke-width="2"/>
+    <circle cx="120" cy="90" r="12" fill="#2d3748"/>
+
+    <!-- NVIDIA-style accent lines -->
+    <rect x="85" y="130" width="70" height="4" fill="#76b900" rx="2"/>
+    <rect x="85" y="145" width="70" height="4" fill="#76b900" rx="2"/>
+    <rect x="85" y="160" width="70" height="4" fill="#76b900" rx="2"/>
+
+    <!-- Nose cone highlight -->
+    <path d="M100,50 Q120,30 140,50" fill="none" stroke="#76b900" stroke-width="2" opacity="0.5"/>
+  </g>
+
+  <!-- Text: cohete -->
+  <text x="480" y="180" font-family="system-ui, -apple-system, sans-serif"
+        font-size="72" font-weight="700" fill="#e2e8f0">cohete</text>
+
+  <!-- Tagline -->
+  <text x="480" y="220" font-family="system-ui, -apple-system, sans-serif"
+        font-size="18" fill="#a0aec0">NVIDIA Jetson Edge Hardware Integration</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(480, 250)">
+    <rect x="0" y="0" width="90" height="28" rx="14" fill="#76b900" opacity="0.2"/>
+    <text x="45" y="19" font-family="system-ui, sans-serif" font-size="12"
+          fill="#76b900" text-anchor="middle">Thermal</text>
+
+    <rect x="100" y="0" width="90" height="28" rx="14" fill="#76b900" opacity="0.2"/>
+    <text x="145" y="19" font-family="system-ui, sans-serif" font-size="12"
+          fill="#76b900" text-anchor="middle">Memory</text>
+
+    <rect x="200" y="0" width="90" height="28" rx="14" fill="#76b900" opacity="0.2"/>
+    <text x="245" y="19" font-family="system-ui, sans-serif" font-size="12"
+          fill="#76b900" text-anchor="middle">Fleet</text>
+  </g>
+
+  <!-- Sovereign AI Stack badge -->
+  <g transform="translate(480, 310)">
+    <rect x="0" y="0" width="180" height="32" rx="4" fill="#2d3748" stroke="#4a5568"/>
+    <text x="90" y="21" font-family="system-ui, sans-serif" font-size="11"
+          fill="#a0aec0" text-anchor="middle">Sovereign AI Stack</text>
+  </g>
+</svg>
