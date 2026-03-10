@@ -1,0 +1,21 @@
+{
+  "rescue_id": "55693e32-ef2d-4bda-aaf2-2965745fcf23",
+  "work_item_id": "PMAT-008",
+  "timestamp": "2026-03-10T11:15:37.791040192Z",
+  "violated_clause": "No vulnerable dependencies added",
+  "strategy": {
+    "ManualIntervention": {
+      "guidance": "Run `cargo audit` to identify vulnerable dependencies, then update or replace them."
+    }
+  },
+  "diagnosis": {
+    "summary": "Manual intervention required: Run `cargo audit` to identify vulnerable dependencies, then update or replace them.",
+    "suggested_actions": [
+      "Run `cargo audit` to identify vulnerable dependencies, then update or replace them.",
+      "Re-run: pmat work complete <id>"
+    ],
+    "generated_artifacts": []
+  },
+  "outcome": "ManualActionRequired",
+  "retry_allowed": true
+}

@@ -1,26 +1,37 @@
 //! Tier 5: Performance baselines — tok/s, RTF, query latency, memory.
 //!
 //! No gate. Metrics recorded for regression tracking across nightly runs.
+//! Compares against 7-day rolling average from history/ to detect regressions.
 
 use crate::runner;
 use crate::types::{PerformanceMetrics, PerformanceResult, MODEL_PATH, TEST_AUDIO_PATH, WHISPER_MODEL_PATH};
+use std::path::Path;
 
-pub fn run() -> PerformanceResult {
+/// Regression threshold: 20% deviation from 7-day rolling average.
+const REGRESSION_THRESHOLD: f64 = 0.20;
+/// Minimum history days required before regression detection activates.
+const MIN_HISTORY_DAYS: usize = 7;
+
+pub fn run(history_dir: Option<&Path>) -> PerformanceResult {
     let inference_tok_s = bench_inference();
     let whisper_rtf = bench_whisper();
     let rag_query_ms = bench_rag_query();
     let memory_available_mb = read_available_memory();
 
+    let metrics = PerformanceMetrics {
+        inference_tok_s,
+        whisper_rtf,
+        rag_query_ms,
+        memory_available_mb,
+    };
+
+    let regressions = detect_regressions(&metrics, history_dir);
+
     PerformanceResult {
         tier: 5,
         pass: true, // Performance tier never gates
-        regressions: 0, // TODO: compare against history/
-        metrics: PerformanceMetrics {
-            inference_tok_s,
-            whisper_rtf,
-            rag_query_ms,
-            memory_available_mb,
-        },
+        regressions,
+        metrics,
     }
 }
 
@@ -138,4 +149,134 @@ fn read_available_memory() -> Option<u64> {
         eprintln!("  memory available: {m} MB");
     }
     mb
+}
+
+/// Compare today's metrics against 7-day rolling average from history files.
+/// Returns the number of regressions detected (>20% deviation).
+fn detect_regressions(metrics: &PerformanceMetrics, history_dir: Option<&Path>) -> u32 {
+    let Some(dir) = history_dir else {
+        return 0;
+    };
+
+    let history = load_recent_metrics(dir, MIN_HISTORY_DAYS);
+    if history.len() < MIN_HISTORY_DAYS {
+        eprintln!(
+            "  regression: SKIP ({} days of history, need {MIN_HISTORY_DAYS})",
+            history.len()
+        );
+        return 0;
+    }
+
+    let mut regressions = 0u32;
+
+    // inference_tok_s: higher is better → regression if delta < -20%
+    if let Some(today) = metrics.inference_tok_s {
+        let avgs: Vec<f64> = history.iter().filter_map(|h| h.inference_tok_s).collect();
+        if let Some(avg) = rolling_avg(&avgs) {
+            let delta = (today - avg) / avg;
+            if delta < -REGRESSION_THRESHOLD {
+                eprintln!("  REGRESSION: inference {today:.1} tok/s vs avg {avg:.1} ({delta:+.0}%)");
+                regressions += 1;
+            }
+        }
+    }
+
+    // whisper_rtf: lower is better → regression if delta > +20%
+    if let Some(today) = metrics.whisper_rtf {
+        let avgs: Vec<f64> = history.iter().filter_map(|h| h.whisper_rtf).collect();
+        if let Some(avg) = rolling_avg(&avgs) {
+            let delta = (today - avg) / avg;
+            if delta > REGRESSION_THRESHOLD {
+                eprintln!("  REGRESSION: whisper RTF {today:.2} vs avg {avg:.2} ({delta:+.0}%)");
+                regressions += 1;
+            }
+        }
+    }
+
+    // rag_query_ms: lower is better → regression if delta > +20%
+    if let Some(today) = metrics.rag_query_ms {
+        let avgs: Vec<f64> = history.iter().filter_map(|h| h.rag_query_ms).collect();
+        if let Some(avg) = rolling_avg(&avgs) {
+            let delta = (today - avg) / avg;
+            if delta > REGRESSION_THRESHOLD {
+                eprintln!("  REGRESSION: RAG query {today:.0}ms vs avg {avg:.0}ms ({delta:+.0}%)");
+                regressions += 1;
+            }
+        }
+    }
+
+    if regressions == 0 {
+        eprintln!("  regression: none detected (vs {MIN_HISTORY_DAYS}-day avg)");
+    }
+
+    regressions
+}
+
+/// Load performance metrics from the most recent N history files.
+fn load_recent_metrics(dir: &Path, days: usize) -> Vec<PerformanceMetrics> {
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let mut metrics = Vec::new();
+
+    for i in 1..=days {
+        #[allow(clippy::cast_possible_wrap)]
+        let offset = i as i64;
+        let date = (chrono::Utc::now() - chrono::Duration::days(offset))
+            .format("%Y-%m-%d")
+            .to_string();
+        if date == today {
+            continue;
+        }
+        let path = dir.join(format!("{date}.json"));
+        let Ok(contents) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(val) = serde_json::from_str::<serde_json::Value>(&contents) else {
+            continue;
+        };
+
+        // Extract performance metrics from summary.json history format
+        // The history file is a copy of summary.json — performance metrics
+        // are not directly in it. Try the top-level "metrics" field first
+        // (if someone stored performance.json), then fall back to parsing
+        // the tiers.performance section.
+        let perf = extract_perf_metrics(&val);
+        if perf.inference_tok_s.is_some()
+            || perf.whisper_rtf.is_some()
+            || perf.rag_query_ms.is_some()
+        {
+            metrics.push(perf);
+        }
+    }
+
+    metrics
+}
+
+/// Extract performance metrics from a history JSON value.
+fn extract_perf_metrics(val: &serde_json::Value) -> PerformanceMetrics {
+    // Try direct "metrics" field (if the history file is a performance.json)
+    if let Some(m) = val.get("metrics") {
+        return PerformanceMetrics {
+            inference_tok_s: m.get("inference_tok_s").and_then(serde_json::Value::as_f64),
+            whisper_rtf: m.get("whisper_rtf").and_then(serde_json::Value::as_f64),
+            rag_query_ms: m.get("rag_query_ms").and_then(serde_json::Value::as_f64),
+            memory_available_mb: m.get("memory_available_mb").and_then(serde_json::Value::as_u64),
+        };
+    }
+
+    // Fallback: empty metrics
+    PerformanceMetrics {
+        inference_tok_s: None,
+        whisper_rtf: None,
+        rag_query_ms: None,
+        memory_available_mb: None,
+    }
+}
+
+fn rolling_avg(values: &[f64]) -> Option<f64> {
+    if values.is_empty() {
+        return None;
+    }
+    #[allow(clippy::cast_precision_loss)]
+    let len = values.len() as f64;
+    Some(values.iter().sum::<f64>() / len)
 }

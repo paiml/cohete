@@ -116,7 +116,7 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
     // Tier 5: Performance
     let performance = if max_tier >= 5 {
         eprintln!("=== Tier 5: Performance ===");
-        let perf = tier5_performance::run();
+        let perf = tier5_performance::run(history_ref);
         emit("performance.json", &perf, output, stdout);
         Some(perf)
     } else {

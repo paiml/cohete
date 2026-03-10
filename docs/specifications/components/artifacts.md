@@ -68,6 +68,12 @@ permanent, auditable record.
     "cuda": "12.6",
     "neon": true,
     "power_mode": "MAXN_SUPER"
+  },
+  "metrics": {
+    "inference_tok_s": 12.4,
+    "whisper_rtf": 0.3,
+    "rag_query_ms": 28.0,
+    "memory_available_mb": 5100
   }
 }
 ```
@@ -76,6 +82,7 @@ permanent, auditable record.
 - `pass`: true only if tier 1 passes AND no tier 3/4 failures (skips are OK)
 - `version_changes`: compared against previous day's history file
 - `skipped`: tests that couldn't run due to missing data (not counted as failures)
+- `metrics`: tier 5 performance data (stored in summary for regression detection across days)
 
 ---
 

@@ -200,6 +200,7 @@ pub struct Summary {
     pub binaries: Vec<BinarySummary>,
     pub version_changes: Vec<VersionChange>,
     pub hardware: Option<HardwareSummary>,
+    pub metrics: Option<PerformanceMetrics>,
 }
 
 #[derive(Serialize)]
@@ -340,6 +341,12 @@ impl Summary {
             binaries,
             version_changes,
             hardware: hw_summary,
+            metrics: performance.map(|p| PerformanceMetrics {
+                inference_tok_s: p.metrics.inference_tok_s,
+                whisper_rtf: p.metrics.whisper_rtf,
+                rag_query_ms: p.metrics.rag_query_ms,
+                memory_available_mb: p.metrics.memory_available_mb,
+            }),
         }
     }
 }
