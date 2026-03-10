@@ -189,3 +189,20 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: PMAT-012
+  github_issue: null
+  item_type: task
+  title: Align spec with implementation
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T11:13:47Z
+  updated: 2026-03-10T11:13:50.135875049+00:00
+  spec: null
+  acceptance_criteria:
+  - 'Update spec docs to match actual implementation: probador→built-in curl, artifact filenames, CLI flags, JSON schemas'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
