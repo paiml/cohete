@@ -1,0 +1,48 @@
+name: Nightly E2E
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC — after forjar provisions at 05:00
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  verify:
+    runs-on: self-hosted  # jetson orin nano
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build cohete
+        run: cargo build --release
+
+      - name: Run verification (all 5 tiers)
+        run: ./target/release/cohete verify --output artifacts/latest
+
+      - name: Copy to history
+        if: always()
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          mkdir -p artifacts/history
+          cp artifacts/latest/summary.json "artifacts/history/${DATE}.json"
+
+      - name: Commit artifacts
+        if: always()
+        run: |
+          git config user.name "cohete-bot"
+          git config user.email "cohete@paiml.com"
+          git add artifacts/
+          git diff --cached --quiet || git commit -m "artifacts: nightly E2E $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ github.run_number }}
+          path: artifacts/latest/
+          retention-days: 90

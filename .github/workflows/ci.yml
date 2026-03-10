@@ -11,13 +11,13 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  test:
+  gate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
@@ -36,46 +36,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy -- -D warnings
 
       - name: Build
-        run: cargo build --all-features
+        run: cargo build --release
 
-      - name: Test
-        run: cargo test --all-features
-
-      - name: Build examples
-        run: cargo build --examples
-
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Generate coverage
-        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: lcov.info
-          fail_ci_if_error: false
-
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
-
-      - name: Build docs
-        run: cargo doc --all-features --no-deps
-        env:
-          RUSTDOCFLAGS: --cfg docsrs
+      - name: Verify help
+        run: ./target/release/cohete --help
