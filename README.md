@@ -38,8 +38,8 @@ It does not build or deploy — it only tests.
 |---|----------|--------|----------------|----------------|
 | M1 | CLI Inference | `apr run` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Model loads + generates tokens on aarch64 |
 | M2 | Chat Server | `apr serve` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | HTTP server responds on ARM |
-| M3 | Correctness | `probador` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Correct code/math/SQL generation (6 tests) |
-| M4 | Load Test | `probador` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Concurrent requests without OOM |
+| M3 | Correctness | `cohete` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Correct code/math/SQL generation (6 tests) |
+| M4 | Load Test | `cohete` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Concurrent requests without OOM |
 | M5 | Transcription | `whisper-apr` | [whisper.apr nightly](https://github.com/paiml/whisper.apr/releases/tag/nightly) | Audio → text on ARM NEON |
 | M6 | RAG Pipeline | `whisper-apr` + `trueno-rag` | [trueno-rag nightly](https://github.com/paiml/trueno-rag/releases/tag/nightly) | Transcribe → index → query end-to-end |
 
@@ -106,13 +106,11 @@ artifacts/
 │   ├── smoke.json         # tier 1: all binary versions
 │   ├── hardware.json      # tier 2: GPU/CUDA/NEON state
 │   ├── functional.json    # tier 3: inference + transcription
-│   ├── correctness.json   # M3: 6 deterministic tests
-│   ├── load.json          # M4: concurrent request results
-│   ├── integration.json   # tier 4: server + RAG pipeline
-│   ├── performance.json   # tier 5: baselines
-│   └── summary.json       # overall pass/fail
+│   ├── integration.json   # tier 4: server + correctness + load + RAG
+│   ├── performance.json   # tier 5: baselines + regression detection
+│   └── summary.json       # overall pass/fail + metrics
 └── history/
-    └── YYYY-MM-DD.json    # daily snapshots
+    └── YYYY-MM-DD.json    # daily snapshots (for regression tracking)
 ```
 
 ## Ownership
