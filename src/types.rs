@@ -190,26 +190,49 @@ pub struct PerformanceMetrics {
 
 #[derive(Serialize)]
 pub struct Summary {
+    pub schema_version: u32,
     pub date: String,
-    pub started: DateTime<Utc>,
-    pub duration_s: u64,
+    pub timestamp: DateTime<Utc>,
+    pub cohete_version: String,
     pub pass: bool,
+    pub duration_s: u64,
     pub tiers: TiersSummary,
     pub binaries: Vec<BinarySummary>,
+    pub version_changes: Vec<VersionChange>,
+    pub hardware: Option<HardwareSummary>,
 }
 
 #[derive(Serialize)]
 pub struct TiersSummary {
     pub smoke: TierStatus,
     pub hardware: Option<TierStatus>,
-    pub functional: Option<TierStatus>,
-    pub integration: Option<TierStatus>,
-    pub performance: Option<TierStatus>,
+    pub functional: Option<TierStatusCounts>,
+    pub integration: Option<TierStatusCounts>,
+    pub performance: Option<TierStatusPerf>,
 }
 
 #[derive(Serialize)]
 pub struct TierStatus {
     pub pass: bool,
+    pub total: u32,
+    pub passed: u32,
+    pub failed: u32,
+    pub skipped: u32,
+}
+
+#[derive(Serialize)]
+pub struct TierStatusCounts {
+    pub pass: bool,
+    pub total: u32,
+    pub passed: u32,
+    pub failed: u32,
+    pub skipped: u32,
+}
+
+#[derive(Serialize)]
+pub struct TierStatusPerf {
+    pub pass: bool,
+    pub regressions: u32,
 }
 
 #[derive(Serialize)]
@@ -219,7 +242,23 @@ pub struct BinarySummary {
     pub installed: bool,
 }
 
+#[derive(Serialize)]
+pub struct VersionChange {
+    pub binary: String,
+    pub from: String,
+    pub to: String,
+}
+
+#[derive(Serialize)]
+pub struct HardwareSummary {
+    pub gpu: Option<String>,
+    pub cuda: Option<String>,
+    pub neon: bool,
+    pub power_mode: Option<String>,
+}
+
 impl Summary {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         started: DateTime<Utc>,
         pass: bool,
@@ -228,11 +267,12 @@ impl Summary {
         functional: Option<&FunctionalResult>,
         integration: Option<&IntegrationResult>,
         performance: Option<&PerformanceResult>,
+        history_dir: Option<&std::path::Path>,
     ) -> Self {
         let now = Utc::now();
         let duration_s = (now - started).num_seconds().unsigned_abs();
 
-        let binaries = smoke
+        let binaries: Vec<BinarySummary> = smoke
             .binaries
             .iter()
             .map(|b| BinarySummary {
@@ -242,19 +282,113 @@ impl Summary {
             })
             .collect();
 
+        let version_changes = detect_version_changes(&binaries, history_dir);
+
+        let hw_summary = hardware.map(|h| HardwareSummary {
+            gpu: h.gpu.as_ref().map(|g| g.model.clone()),
+            cuda: h.gpu.as_ref().and_then(|g| g.cuda_version.clone()),
+            neon: h.cpu.neon,
+            power_mode: h.power_mode.clone(),
+        });
+
+        #[allow(clippy::cast_possible_truncation)]
+        let smoke_total = smoke.binaries.len() as u32;
+        #[allow(clippy::cast_possible_truncation)]
+        let smoke_passed = smoke.binaries.iter().filter(|b| b.exists && b.executable && b.help_ok && b.version.is_some()).count() as u32;
+
         Self {
+            schema_version: 1,
             date: started.format("%Y-%m-%d").to_string(),
-            started,
-            duration_s,
+            timestamp: now,
+            cohete_version: env!("CARGO_PKG_VERSION").to_string(),
             pass,
+            duration_s,
             tiers: TiersSummary {
-                smoke: TierStatus { pass: smoke.pass },
-                hardware: hardware.map(|h| TierStatus { pass: h.pass }),
-                functional: functional.map(|f| TierStatus { pass: f.pass }),
-                integration: integration.map(|i| TierStatus { pass: i.pass }),
-                performance: performance.map(|p| TierStatus { pass: p.pass }),
+                smoke: TierStatus {
+                    pass: smoke.pass,
+                    total: smoke_total,
+                    passed: smoke_passed,
+                    failed: smoke_total - smoke_passed,
+                    skipped: 0,
+                },
+                hardware: hardware.map(|h| TierStatus {
+                    pass: h.pass,
+                    total: 1,
+                    passed: u32::from(h.pass),
+                    failed: u32::from(!h.pass),
+                    skipped: 0,
+                }),
+                functional: functional.map(|f| TierStatusCounts {
+                    pass: f.pass,
+                    total: f.total,
+                    passed: f.passed,
+                    failed: f.failed,
+                    skipped: f.skipped,
+                }),
+                integration: integration.map(|i| TierStatusCounts {
+                    pass: i.pass,
+                    total: i.total,
+                    passed: i.passed,
+                    failed: i.failed,
+                    skipped: i.skipped,
+                }),
+                performance: performance.map(|p| TierStatusPerf {
+                    pass: p.pass,
+                    regressions: p.regressions,
+                }),
             },
             binaries,
+            version_changes,
+            hardware: hw_summary,
         }
     }
+}
+
+/// Compare current binary versions against yesterday's history file.
+fn detect_version_changes(
+    binaries: &[BinarySummary],
+    history_dir: Option<&std::path::Path>,
+) -> Vec<VersionChange> {
+    let Some(dir) = history_dir else {
+        return Vec::new();
+    };
+
+    // Find yesterday's file
+    let yesterday = (chrono::Utc::now() - chrono::Duration::days(1))
+        .format("%Y-%m-%d")
+        .to_string();
+    let yesterday_file = dir.join(format!("{yesterday}.json"));
+
+    let Ok(data) = std::fs::read_to_string(&yesterday_file) else {
+        return Vec::new();
+    };
+
+    let Ok(prev) = serde_json::from_str::<serde_json::Value>(&data) else {
+        return Vec::new();
+    };
+
+    let Some(prev_bins) = prev.get("binaries").and_then(|b| b.as_array()) else {
+        return Vec::new();
+    };
+
+    let mut changes = Vec::new();
+    for bin in binaries {
+        let Some(ref current_ver) = bin.version else { continue };
+        let prev_ver = prev_bins
+            .iter()
+            .find(|b| b.get("name").and_then(|n| n.as_str()) == Some(&bin.name))
+            .and_then(|b| b.get("version"))
+            .and_then(|v| v.as_str());
+
+        if let Some(prev) = prev_ver {
+            if prev != current_ver {
+                changes.push(VersionChange {
+                    binary: bin.name.clone(),
+                    from: prev.to_string(),
+                    to: current_ver.clone(),
+                });
+            }
+        }
+    }
+    changes
 }

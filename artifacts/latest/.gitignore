@@ -1,0 +1,5 @@
+# Nightly artifacts — overwritten every run, not committed.
+# Only history/ is committed (one snapshot per day).
+*.json
+!.gitignore
+!.gitkeep

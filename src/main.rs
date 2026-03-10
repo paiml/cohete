@@ -70,9 +70,12 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
     let smoke = tier1_smoke::run();
     emit("smoke.json", &smoke, output, stdout);
 
+    let history_dir = output.parent().map(|p| p.join("history"));
+    let history_ref = history_dir.as_deref();
+
     if !smoke.pass && !allow_missing {
         eprintln!("FATAL: tier 1 smoke failed — aborting (use --allow-missing to continue)");
-        let summary = types::Summary::new(started, false, &smoke, None, None, None, None);
+        let summary = types::Summary::new(started, false, &smoke, None, None, None, None, history_ref);
         emit("summary.json", &summary, output, stdout);
         return false;
     }
@@ -134,6 +137,7 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
         functional.as_ref(),
         integration.as_ref(),
         performance.as_ref(),
+        history_ref,
     );
     emit("summary.json", &summary, output, stdout);
 

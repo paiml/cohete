@@ -172,3 +172,20 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: PMAT-011
+  github_issue: null
+  item_type: task
+  title: Enrich summary.json schema to match artifacts spec
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T11:07:33Z
+  updated: 2026-03-10T11:07:36.691790670+00:00
+  spec: null
+  acceptance_criteria:
+  - Spec requires schema_version, cohete_version, cohete_sha, version_changes, hardware section, tier totals/passed/failed/skipped counts. Current impl only has pass boolean per tier.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
