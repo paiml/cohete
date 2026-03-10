@@ -75,8 +75,10 @@ pub struct HardwareResult {
     pub tier: u8,
     pub pass: bool,
     pub gpu: Option<GpuInfo>,
+    pub vulkan: Option<String>,
     pub cpu: CpuInfo,
     pub memory: MemoryInfo,
+    pub disk_ok: bool,
     pub power_mode: Option<String>,
     pub jetpack: Option<String>,
 }
@@ -256,6 +258,7 @@ pub struct HardwareSummary {
     pub cuda: Option<String>,
     pub neon: bool,
     pub power_mode: Option<String>,
+    pub jetpack: Option<String>,
 }
 
 impl Summary {
@@ -290,6 +293,7 @@ impl Summary {
             cuda: h.gpu.as_ref().and_then(|g| g.cuda_version.clone()),
             neon: h.cpu.neon,
             power_mode: h.power_mode.clone(),
+            jetpack: h.jetpack.clone(),
         });
 
         #[allow(clippy::cast_possible_truncation)]

@@ -35,8 +35,9 @@ jobs:
         run: |
           git config user.name "cohete-bot"
           git config user.email "cohete@paiml.com"
-          git add artifacts/
-          git diff --cached --quiet || git commit -m "artifacts: nightly E2E $(date -u +%Y-%m-%d)"
+          git add artifacts/history/
+          PASS_STATUS=$(python3 -c "import json; d=json.load(open('artifacts/latest/summary.json')); print('pass' if d.get('pass') else 'FAIL')" 2>/dev/null || echo "FAIL")
+          git diff --cached --quiet || git commit -m "nightly: $(date -u +%Y-%m-%d) [${PASS_STATUS}]"
           git push
 
       - name: Upload artifacts

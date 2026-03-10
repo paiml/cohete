@@ -7,8 +7,10 @@ use crate::types::{CpuInfo, GpuInfo, HardwareResult, MemoryInfo};
 
 pub fn run() -> HardwareResult {
     let gpu = probe_gpu();
+    let vulkan = probe_vulkan();
     let cpu = probe_cpu();
     let memory = probe_memory();
+    let disk_ok = probe_disk();
     let power_mode = probe_power_mode();
     let jetpack = probe_jetpack();
 
@@ -20,8 +22,10 @@ pub fn run() -> HardwareResult {
         tier: 2,
         pass,
         gpu,
+        vulkan,
         cpu,
         memory,
+        disk_ok,
         power_mode,
         jetpack,
     }
@@ -51,6 +55,26 @@ fn probe_gpu() -> Option<GpuInfo> {
         model,
         cuda_version,
     })
+}
+
+fn probe_vulkan() -> Option<String> {
+    let result = runner::shell("vulkaninfo --summary 2>&1 | grep -i 'deviceName' | head -1");
+    if result.success && !result.stdout.is_empty() {
+        let name = result.stdout.trim().to_string();
+        eprintln!("  Vulkan: {name}");
+        Some(name)
+    } else {
+        eprintln!("  Vulkan: not available");
+        None
+    }
+}
+
+fn probe_disk() -> bool {
+    let result = runner::shell("df -BG /home | tail -1 | awk '{print $4}' | tr -d 'G'");
+    let avail_gb = result.stdout.trim().parse::<u64>().unwrap_or(0);
+    let ok = avail_gb >= 10;
+    eprintln!("  Disk: {avail_gb} GB available (need >= 10)");
+    ok
 }
 
 fn probe_cpu() -> CpuInfo {

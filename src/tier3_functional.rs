@@ -143,8 +143,15 @@ fn test_whisper_transcribe() -> TestEntry {
 fn test_forjar_smoke() -> TestEntry {
     // forjar plan with empty input — should fail gracefully, not segfault
     let result = runner::run("forjar", &["plan", "-f", "/dev/null"]);
-    // We expect an error (no valid YAML), but not a crash
-    let status = if result.exit_code.is_some() { TestStatus::Pass } else { TestStatus::Fail };
+    // Pass if process exited normally (not killed by signal like SIGSEGV).
+    // A non-zero exit is expected (invalid YAML), but a signal death means crash.
+    // Pass if process exited normally (not killed by signal like SIGSEGV).
+    // A non-zero exit is expected (invalid YAML), but a signal death means crash.
+    let status = if result.exit_code.is_some() {
+        TestStatus::Pass
+    } else {
+        TestStatus::Fail // killed by signal = crash
+    };
     eprintln!("  forjar plan (smoke): {}", status_label(&status));
 
     TestEntry {
@@ -232,9 +239,23 @@ fn test_trueno_rag_smoke() -> TestEntry {
 }
 
 fn test_batuta_smoke() -> TestEntry {
+    // Skip if no oracle index configured
+    let config_exists = std::path::Path::new("/home/noah/.batuta-private.toml").exists()
+        || std::path::Path::new("/home/noah/.config/batuta/config.toml").exists();
+    if !config_exists {
+        eprintln!("  batuta oracle (smoke): SKIP (no oracle index configured)");
+        return TestEntry {
+            binary: "batuta".into(),
+            test: "oracle_smoke".into(),
+            modality: None,
+            status: TestStatus::Skip,
+            duration_ms: 0,
+            output: Some("no oracle index configured".into()),
+        };
+    }
+
     let result = runner::run("batuta", &["oracle", "--rag", "test query"]);
-    // batuta may not have oracle index — pass if it exits gracefully
-    let status = if result.exit_code.is_some() { TestStatus::Pass } else { TestStatus::Fail };
+    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
     eprintln!("  batuta oracle (smoke): {}", status_label(&status));
 
     TestEntry {
