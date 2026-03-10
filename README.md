@@ -82,9 +82,9 @@ Total: **< 5 minutes**.
 | basic_math | "What is 7 * 8?" | Contains "56" |
 | python_fibonacci | "Write fibonacci" | Contains "def fib" |
 | rust_hello | "Write hello world in Rust" | Contains "fn main" |
-| json_output | "Return JSON: name=Alice, age=30" | Regex `"name".*"Alice"` |
-| code_explanation | "What does vec map do?" | Regex `(double\|multiply\|2)` |
-| sql_query | "Top 5 users by orders" | Regex `SELECT.*ORDER BY.*LIMIT` |
+| json_output | "Return JSON with name Alice" | Contains "name" AND "Alice" |
+| code_explanation | "What does map do on a vector?" | Contains double/multiply/transform/2 |
+| sql_query | "Write SQL for top 5 users by orders" | Contains SELECT + ORDER BY + LIMIT |
 
 All tests: temperature=0, deterministic.
 

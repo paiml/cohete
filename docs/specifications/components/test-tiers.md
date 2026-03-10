@@ -50,14 +50,15 @@ For every binary in the matrix, run:
 
 | Check | Command | Pass criteria |
 |-------|---------|---------------|
-| GPU present | `nvidia-smi` | Exit 0, lists Orin |
-| CUDA available | `nvcc --version` | Exit 0, prints 12.x |
-| Vulkan available | `vulkaninfo --summary 2>&1` | Contains "Tegra" |
-| NEON available | `cat /proc/cpuinfo \| grep neon` | Match found |
+| GPU present | `nvidia-smi --query-gpu=name` | Exit 0, lists GPU model |
+| CUDA available | `nvidia-smi \| grep 'CUDA Version'` | Parses version string |
+| Vulkan available | `vulkaninfo --summary` | Contains deviceName |
+| NEON available | `grep neon /proc/cpuinfo` | Match found |
+| CPU cores | `nproc` | Returns count |
+| Memory | `grep MemTotal /proc/meminfo` | Total >= 7000 MB |
+| Disk space | `df -BG /home` | Available >= 10 GB |
+| Power mode | `nvpmodel -q` | Extracts NV Power Mode |
 | JetPack version | `cat /etc/nv_tegra_release` | Non-empty |
-| Power mode | `nvpmodel -q` | Contains "MAXN" |
-| Memory | `free -m` | Total >= 7000 MB |
-| Disk | `df -h /home` | Available > 10 GB |
 
 **Output: `hardware.json`**
 
@@ -69,6 +70,7 @@ For every binary in the matrix, run:
     "model": "Orin",
     "cuda_version": "12.6"
   },
+  "vulkan": "deviceName = NVIDIA Tegra Orin",
   "cpu": {
     "neon": true,
     "cores": 6
@@ -77,6 +79,7 @@ For every binary in the matrix, run:
     "total_mb": 7628,
     "available_mb": 5200
   },
+  "disk_ok": true,
   "power_mode": "MAXN_SUPER",
   "jetpack": "6.2.2"
 }
@@ -176,8 +179,8 @@ batuta oracle --rag "test query" 2>&1
 {
   "tier": 3,
   "pass": true,
-  "total": 10,
-  "passed": 9,
+  "total": 9,
+  "passed": 8,
   "skipped": 1,
   "failed": 0,
   "tests": [

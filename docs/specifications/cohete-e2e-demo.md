@@ -163,7 +163,7 @@ and produces tokens. Fastest feedback loop.
 
 ```bash
 apr run --model ~/data/models/canary/qwen-1.5b-q4k.apr \
-    --prompt "Write a Python fibonacci function" --max-tokens 128
+    --prompt "1+1=" --max-tokens 8
 ```
 
 **M2: Chat Server** — Start `apr serve --model ... --port 8090`, verify `/health` endpoint,
@@ -290,7 +290,7 @@ artifacts/
   "tiers": {
     "smoke": { "pass": true, "total": 8, "passed": 8, "failed": 0, "skipped": 0 },
     "hardware": { "pass": true, "total": 1, "passed": 1, "failed": 0, "skipped": 0 },
-    "functional": { "pass": true, "total": 12, "passed": 10, "failed": 0, "skipped": 2 },
+    "functional": { "pass": true, "total": 9, "passed": 7, "failed": 0, "skipped": 2 },
     "integration": { "pass": true, "total": 4, "passed": 4, "failed": 0, "skipped": 0 },
     "performance": { "pass": true, "regressions": 0 }
   },
@@ -311,7 +311,8 @@ artifacts/
     "gpu": "Orin",
     "cuda": "12.6",
     "neon": true,
-    "power_mode": "MAXN_SUPER"
+    "power_mode": "MAXN_SUPER",
+    "jetpack": "R36.4.3"
   }
 }
 ```

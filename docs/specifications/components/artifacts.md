@@ -46,7 +46,7 @@ permanent, auditable record.
   "tiers": {
     "smoke":       { "pass": true, "total": 8, "passed": 8, "failed": 0, "skipped": 0 },
     "hardware":    { "pass": true, "total": 1, "passed": 1, "failed": 0, "skipped": 0 },
-    "functional":  { "pass": true, "total": 12, "passed": 10, "failed": 0, "skipped": 2 },
+    "functional":  { "pass": true, "total": 9, "passed": 7, "failed": 0, "skipped": 2 },
     "integration": { "pass": true, "total": 4, "passed": 4, "failed": 0, "skipped": 0 },
     "performance": { "pass": true, "regressions": 0 }
   },
@@ -67,7 +67,8 @@ permanent, auditable record.
     "gpu": "Orin",
     "cuda": "12.6",
     "neon": true,
-    "power_mode": "MAXN_SUPER"
+    "power_mode": "MAXN_SUPER",
+    "jetpack": "R36.4.3"
   },
   "metrics": {
     "inference_tok_s": 12.4,

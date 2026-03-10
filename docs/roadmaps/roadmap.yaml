@@ -6,7 +6,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Delete old library code and scaffold E2E binary
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:38:59Z
@@ -23,7 +23,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 1 smoke tests
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:06Z
@@ -40,7 +40,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 2 hardware probe
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:08Z
@@ -57,7 +57,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 3 functional tests
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:10Z
@@ -74,7 +74,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 4 integration tests
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:11Z
@@ -91,7 +91,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 5 performance baselines
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:13Z
@@ -108,7 +108,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Add nightly-e2e.yml GitHub Actions workflow
-  status: planned
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:15Z
@@ -125,7 +125,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Fix binary path resolution — check PATH fallback
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:54:04Z
@@ -142,7 +142,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: 'Fix dogfood issues: apr check, CUDA parse, copia sync, pzsh'
-  status: planned
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:56:41Z
@@ -159,7 +159,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Add nightly.yml for cohete cross-platform binary releases
-  status: planned
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:58:38Z
@@ -176,7 +176,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Enrich summary.json schema to match artifacts spec
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T11:07:33Z
@@ -193,7 +193,7 @@ roadmap:
   github_issue: null
   item_type: task
   title: Align spec with implementation
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-10T11:13:47Z
@@ -201,6 +201,40 @@ roadmap:
   spec: null
   acceptance_criteria:
   - 'Update spec docs to match actual implementation: probador→built-in curl, artifact filenames, CLI flags, JSON schemas'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-013
+  github_issue: null
+  item_type: task
+  title: Implement tier 5 performance regression detection
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T11:16:04Z
+  updated: 2026-03-10T11:16:09.442114508+00:00
+  spec: null
+  acceptance_criteria:
+  - Compare today's performance metrics against 7-day rolling average from artifacts/history/. Flag regressions >20% deviation. Currently regressions field is always 0.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-014
+  github_issue: null
+  item_type: task
+  title: Fix falsification findings — 11 critical code bugs
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T11:26:53Z
+  updated: 2026-03-10T11:26:53.714192995+00:00
+  spec: null
+  acceptance_criteria:
+  - Vulkan+disk missing from tier2, correctness regex weakened, jq dependency, batuta skip, commit message format, jetpack in summary, gitignore
   phases: []
   subtasks: []
   estimated_effort: null
