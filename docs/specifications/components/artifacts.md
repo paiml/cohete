@@ -41,33 +41,32 @@ permanent, auditable record.
   "date": "2026-03-10",
   "timestamp": "2026-03-10T06:04:32Z",
   "cohete_version": "0.1.0",
-  "cohete_sha": "abc1234def5678",
   "pass": true,
   "duration_s": 187,
   "tiers": {
     "smoke":       { "pass": true, "total": 8, "passed": 8, "failed": 0, "skipped": 0 },
-    "hardware":    { "pass": true },
+    "hardware":    { "pass": true, "total": 1, "passed": 1, "failed": 0, "skipped": 0 },
     "functional":  { "pass": true, "total": 12, "passed": 10, "failed": 0, "skipped": 2 },
-    "integration": { "pass": true, "total": 3, "passed": 2, "failed": 0, "skipped": 1 },
+    "integration": { "pass": true, "total": 4, "passed": 4, "failed": 0, "skipped": 0 },
     "performance": { "pass": true, "regressions": 0 }
   },
-  "binaries": {
-    "forjar":     { "version": "0.5.2", "installed": true },
-    "pmat":       { "version": "0.9.1", "installed": true },
-    "copia":      { "version": "0.3.0", "installed": true },
-    "pzsh":       { "version": "0.2.4", "installed": true },
-    "trueno-rag": { "version": "0.2.3", "installed": true },
-    "whisper-apr": { "version": "0.2.5", "installed": true },
-    "apr":        { "version": "0.28.0", "installed": true },
-    "batuta":     { "version": "0.6.7", "installed": true }
-  },
+  "binaries": [
+    { "name": "apr", "version": "0.28.0", "installed": true },
+    { "name": "whisper-apr", "version": "0.2.5", "installed": true },
+    { "name": "trueno-rag", "version": "0.2.3", "installed": true },
+    { "name": "forjar", "version": "0.5.2", "installed": true },
+    { "name": "pmat", "version": "0.9.1", "installed": true },
+    { "name": "copia", "version": "0.3.0", "installed": true },
+    { "name": "pzsh", "version": "0.2.4", "installed": true },
+    { "name": "batuta", "version": "0.6.7", "installed": true }
+  ],
   "version_changes": [
     { "binary": "forjar", "from": "0.5.1", "to": "0.5.2" }
   ],
   "hardware": {
-    "model": "Orin Nano 8GB",
-    "jetpack": "6.2.2",
+    "gpu": "Orin",
     "cuda": "12.6",
+    "neon": true,
     "power_mode": "MAXN_SUPER"
   }
 }

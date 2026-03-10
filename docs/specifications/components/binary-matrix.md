@@ -79,7 +79,7 @@ These must run on every nightly. No exceptions.
 | Qwen 1.5B Q4K | ~/data/models/canary/qwen-1.5b-q4k.apr | ~1 GB | forjar | M1,M2,M3,M4,M5 (tier 3/4/5) |
 | Whisper tiny.en | ~/data/models/canary/whisper-tiny.en | ~75 MB | forjar | M5,M6 (tier 3/4) |
 | Test audio (2s) | ~/data/models/canary/test-2s.wav | ~32 KB | forjar | M5,M6 (tier 3/4) |
-| Correctness suite | cohete repo: canary/correctness.yaml | 1 KB | cohete checkout | M3 (tier 4) |
+| Correctness tests | cohete binary (built-in) | — | cohete build | M3 (tier 4) |
 | Oracle index | ~/.batuta-private.toml → SQLite | varies | forjar | batuta smoke |
 
 Missing models/data cause individual test **skips**, not failures. Cohete

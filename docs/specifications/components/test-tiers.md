@@ -67,14 +67,11 @@ For every binary in the matrix, run:
   "pass": true,
   "gpu": {
     "model": "Orin",
-    "cuda_version": "12.6",
-    "compute_capability": "8.7",
-    "cuda_cores": 1024
+    "cuda_version": "12.6"
   },
   "cpu": {
-    "model": "Cortex-A78AE",
-    "cores": 6,
-    "neon": true
+    "neon": true,
+    "cores": 6
   },
   "memory": {
     "total_mb": 7628,
@@ -184,9 +181,9 @@ batuta oracle --rag "test query" 2>&1
   "skipped": 1,
   "failed": 0,
   "tests": [
-    { "binary": "apr", "test": "check", "modality": null, "pass": true, "duration_ms": 1200 },
-    { "binary": "apr", "test": "inference", "modality": "M1", "pass": true, "duration_ms": 3400 },
-    { "binary": "whisper-apr", "test": "transcribe", "modality": "M5", "pass": true, "duration_ms": 2100 }
+    { "binary": "apr", "test": "check", "modality": null, "status": "pass", "duration_ms": 1200 },
+    { "binary": "apr", "test": "inference", "modality": "M1", "status": "pass", "duration_ms": 3400 },
+    { "binary": "whisper-apr", "test": "transcribe", "modality": "M5", "status": "pass", "duration_ms": 2100 }
   ]
 }
 ```
@@ -202,16 +199,26 @@ batuta oracle --rag "test query" 2>&1
 
 ```bash
 # 1. Start chat server (background)
-apr serve --model ~/data/models/canary/qwen-1.5b-q4k.apr --port 8080 &
-until curl -sf http://localhost:8080/health; do sleep 1; done
+apr serve --model ~/data/models/canary/qwen-1.5b-q4k.apr --port 8090 &
+SERVER_PID=$!
 
-# 2. Run 6 correctness tests
-probador llm test \
-    --config canary/correctness.yaml \
-    --url http://localhost:8080 \
-    --output artifacts/latest/correctness.json
+# 2. Wait for health
+for i in $(seq 1 30); do
+  curl -sf http://localhost:8090/health && break
+  sleep 1
+done
 
-# 3. Stop server (after M4)
+# 3. Run 6 correctness tests (cohete built-in curl, temperature=0)
+# Tests: basic_math, python_fibonacci, rust_hello, json_output,
+#        code_explanation, sql_query
+# Each sends a POST to /v1/chat/completions with max_tokens=128
+curl -sf -X POST http://localhost:8090/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"What is 7 * 8?"}],"max_tokens":128,"temperature":0}'
+# Pass: response contains "56"
+# (repeat for all 6 tests)
+
+# 4. Stop server (after M4)
 ```
 
 **Pass:** All 6 tests pass (basic_math, python_fibonacci, rust_hello,
@@ -221,18 +228,20 @@ json_output, code_explanation, sql_query).
 
 ```bash
 # Server still running from M2
-probador llm load \
-    --url http://localhost:8080 \
-    --concurrency 2 \
-    --duration 30s \
-    --warmup 5s \
-    --output artifacts/latest/load.json
+# 2 concurrent curl requests
+for i in 1 2; do
+  curl -sf -X POST http://localhost:8090/v1/chat/completions \
+    -H 'Content-Type: application/json' \
+    -d '{"messages":[{"role":"user","content":"Hello"}],"max_tokens":16,"temperature":0}' &
+done
+wait
 
 # Now stop server
-pkill -f "apr serve" || true
+kill $SERVER_PID 2>/dev/null
+pkill -f "apr serve" 2>/dev/null || true
 ```
 
-**Pass:** No crashes, no OOM. Reports RPS and latency.
+**Pass:** No crashes, no OOM. Both requests complete successfully.
 
 ### M6: RAG Pipeline (Transcribe → Index → Query)
 
@@ -264,10 +273,10 @@ trueno-rag query --sqlite /tmp/pipeline.db "what was said"
   "failed": 0,
   "skipped": 0,
   "modalities": {
-    "M2_chat_server": { "pass": true, "health_ok": true },
+    "M2_chat_server": { "pass": true, "detail": "health endpoint OK" },
     "M3_correctness": { "pass": true, "total": 6, "passed": 6 },
-    "M4_load_test": { "pass": true, "rps": 1.2, "p50_ms": 820, "oom": false },
-    "M6_rag_pipeline": { "pass": true, "steps": ["transcribe","index","query"], "all_passed": true }
+    "M4_load_test": { "pass": true, "detail": "2 concurrent requests, 1240ms" },
+    "M6_rag_pipeline": { "pass": true, "detail": "transcribe→index→query complete" }
   }
 }
 ```

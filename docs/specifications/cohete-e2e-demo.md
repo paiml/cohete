@@ -152,9 +152,9 @@ Cohete proves **6 modalities** of the sovereign stack on edge:
 | # | Modality | Binary | What it proves | Artifact |
 |---|----------|--------|----------------|----------|
 | M1 | **CLI inference** | `apr run` | Model loads, tokenizes, generates on aarch64 | `functional.json` |
-| M2 | **Chat server** | `apr --serve` | HTTP server starts, responds to requests | `integration.json` |
-| M3 | **Correctness** | `probador` + `apr` | Model produces correct code/math/SQL (6 tests) | `correctness.json` |
-| M4 | **Load test** | `probador` + `apr` | Handles concurrent requests without OOM/crash | `load.json` |
+| M2 | **Chat server** | `apr serve` | HTTP server starts, responds to requests | `integration.json` |
+| M3 | **Correctness** | `cohete` + `apr` | Model produces correct code/math/SQL (6 tests) | `integration.json` |
+| M4 | **Load test** | `cohete` + `apr` | Handles concurrent requests without OOM/crash | `integration.json` |
 | M5 | **Transcription** | `whisper-apr` | Audio → text on ARM NEON (no GPU required) | `functional.json` |
 | M6 | **RAG pipeline** | `whisper-apr` + `trueno-rag` | Transcribe → index → query end-to-end | `integration.json` |
 
@@ -166,11 +166,11 @@ apr run --model ~/data/models/canary/qwen-1.5b-q4k.apr \
     --prompt "Write a Python fibonacci function" --max-tokens 128
 ```
 
-**M2: Chat Server** — Start `apr --serve --port 8080`, verify `/health` endpoint,
+**M2: Chat Server** — Start `apr serve --model ... --port 8090`, verify `/health` endpoint,
 send a chat completion request via curl. Proves the HTTP stack works on ARM.
 
-**M3: Correctness** — 6 deterministic tests (temperature=0) via probador against
-the running chat server:
+**M3: Correctness** — 6 deterministic tests (temperature=0) via cohete's built-in
+curl requests against the running chat server:
 
 | Test | Prompt | Pass criteria |
 |------|--------|--------------|
@@ -181,7 +181,7 @@ the running chat server:
 | code_explanation | "What does vec map do?" | Regex `(double\|multiply\|2)` |
 | sql_query | "Top 5 users by orders" | Regex `SELECT.*ORDER BY.*LIMIT` |
 
-**M4: Load Test** — 2 concurrent requests for 30 seconds. Jetson has 8 GB shared
+**M4: Load Test** — 2 concurrent curl requests. Jetson has 8 GB shared
 memory; this proves inference doesn't OOM under light concurrency.
 
 **M5: Transcription** — `whisper-apr transcribe test.wav` on a short audio clip.
@@ -281,32 +281,38 @@ artifacts/
 
 ```json
 {
+  "schema_version": 1,
   "date": "2026-03-10",
-  "sha": "abc1234",
+  "timestamp": "2026-03-10T06:04:32Z",
+  "cohete_version": "0.1.0",
   "pass": true,
-  "model": "Qwen2.5-Coder-1.5B-Q4K",
-  "modalities": {
-    "cli_inference": true,
-    "chat_server": true,
-    "correctness": { "pass": true, "total": 6, "passed": 6 },
-    "load_test": { "pass": true, "rps": 1.2, "p50_ms": 820 },
-    "transcription": true,
-    "rag_pipeline": true
-  },
+  "duration_s": 187,
   "tiers": {
-    "smoke": { "pass": true, "total": 8, "failed": 0 },
-    "hardware": { "pass": true, "gpu": "Orin", "cuda": "12.6", "neon": true },
-    "functional": { "pass": true, "total": 12, "failed": 0 },
-    "integration": { "pass": true, "total": 4, "failed": 0 },
+    "smoke": { "pass": true, "total": 8, "passed": 8, "failed": 0, "skipped": 0 },
+    "hardware": { "pass": true, "total": 1, "passed": 1, "failed": 0, "skipped": 0 },
+    "functional": { "pass": true, "total": 12, "passed": 10, "failed": 0, "skipped": 2 },
+    "integration": { "pass": true, "total": 4, "passed": 4, "failed": 0, "skipped": 0 },
     "performance": { "pass": true, "regressions": 0 }
   },
-  "binaries": {
-    "forjar": { "version": "0.5.2", "installed": true },
-    "apr": { "version": "0.28.0", "installed": true },
-    "whisper-apr": { "version": "0.2.5", "installed": true },
-    "trueno-rag": { "version": "0.2.3", "installed": true }
-  },
-  "duration_s": 187
+  "binaries": [
+    { "name": "apr", "version": "0.28.0", "installed": true },
+    { "name": "whisper-apr", "version": "0.2.5", "installed": true },
+    { "name": "trueno-rag", "version": "0.2.3", "installed": true },
+    { "name": "forjar", "version": "0.5.2", "installed": true },
+    { "name": "pmat", "version": "0.9.1", "installed": true },
+    { "name": "copia", "version": "0.3.0", "installed": true },
+    { "name": "pzsh", "version": "0.2.4", "installed": true },
+    { "name": "batuta", "version": "0.6.7", "installed": true }
+  ],
+  "version_changes": [
+    { "binary": "forjar", "from": "0.5.1", "to": "0.5.2" }
+  ],
+  "hardware": {
+    "gpu": "Orin",
+    "cuda": "12.6",
+    "neon": true,
+    "power_mode": "MAXN_SUPER"
+  }
 }
 ```
 
