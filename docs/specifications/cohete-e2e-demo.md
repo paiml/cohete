@@ -78,7 +78,18 @@ Jetson itself and produces falsifiable JSON artifacts proving the stack works.
 | **cohete** | **Verify everything works on jetson** | Building or deploying binaries |
 
 Cohete assumes binaries are already installed at `~/.cargo/bin/` by forjar.
-It only tests. If a test fails, the bug is upstream — cohete reports it.
+It also checks PATH as a fallback (for dev machines). It only tests.
+If a test fails, the bug is upstream — cohete reports it.
+
+**CLI:**
+
+```
+cohete verify [OPTIONS]
+  -o, --output <DIR>       Write artifacts here [default: artifacts/latest]
+      --max-tier <N>       Only run tiers 1..N (1-5)
+      --stdout             Print JSON to stdout instead of writing files
+      --allow-missing      Continue past tier 1 gate if binaries are missing
+```
 
 ## 3. Ownership Model
 
@@ -229,7 +240,7 @@ on:
     - cron: "0 6 * * *"    # 06:00 UTC (after forjar at 05:00)
   workflow_dispatch:
 
-runs-on: self-hosted        # jetson orin nano
+runs-on: [self-hosted, jetson]
 
 steps:
   1. checkout cohete

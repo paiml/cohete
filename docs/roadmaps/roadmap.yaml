@@ -155,3 +155,20 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: PMAT-010
+  github_issue: null
+  item_type: task
+  title: Add nightly.yml for cohete cross-platform binary releases
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:58:38Z
+  updated: 2026-03-10T10:58:38Z
+  spec: null
+  acceptance_criteria:
+  - cohete needs to produce aarch64 binary for jetson via nightly release workflow, same pattern as other 20 repos.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null

@@ -1,6 +1,6 @@
 {
   "version": "1.4.0",
-  "built_at": "2026-03-10T10:56:16.482134233+00:00",
+  "built_at": "2026-03-10T10:58:32.256628894+00:00",
   "project_root": "/home/noah/src/cohete",
   "function_count": 57,
   "file_count": 8,
@@ -9,14 +9,14 @@
   ],
   "avg_tdg_score": 0.100350834,
   "file_checksums": {
-    "src/tier3_functional.rs": "17f3e6c8c575e5a4e93a51089c683d0b6666f20a72b601c124194637fa6f6842",
-    "src/tier5_performance.rs": "92d0f181a7b19d152871c76cad18f8df223c65678a349b02ba1e3dc57a35f576",
-    "src/tier2_hardware.rs": "375e3250863cd7e7c62c0de183b1ecd9aafe8b92e54dc7a3b5e2073cce99627a",
-    "src/tier1_smoke.rs": "eeb54325cbe85dddc8dc05a8ac01b44f58605f819116ea1343e0066a5966b952",
-    "src/tier4_integration.rs": "6d719dc8abd601f8bca33f329aef7e98325d586a57ff76a31a22915a46bd6e0c",
     "src/types.rs": "7f57d87fbb3ac8514b62c887c2eecc0f9ad9c6d7824479b9587c6f0ebe17ea80",
+    "src/tier4_integration.rs": "6d719dc8abd601f8bca33f329aef7e98325d586a57ff76a31a22915a46bd6e0c",
+    "src/main.rs": "baa88e9192c832a86ecda12a03dcddde98448607f5927d3d277c6bbd431cfa0e",
+    "src/tier3_functional.rs": "51b2d9728ac69d11fb5f28b2eceaf45d1a016936584f430e90c4e95542f1cee7",
+    "src/tier5_performance.rs": "92d0f181a7b19d152871c76cad18f8df223c65678a349b02ba1e3dc57a35f576",
+    "src/tier1_smoke.rs": "eeb54325cbe85dddc8dc05a8ac01b44f58605f819116ea1343e0066a5966b952",
     "src/runner.rs": "d5ba2db052f09a2b0f078352e3f86dcf38b48bbd0a2252d7adb482ed8be0a7c5",
-    "src/main.rs": "baa88e9192c832a86ecda12a03dcddde98448607f5927d3d277c6bbd431cfa0e"
+    "src/tier2_hardware.rs": "7b66f79ad866cbc24fc51f254a7bf48e034c44e6cad7fc53bf0b059ce1be8db4"
   },
-  "last_incremental_changes": 3
+  "last_incremental_changes": 0
 }
