@@ -10,11 +10,15 @@ pub fn run() -> SmokeResult {
     let mut all_pass = true;
 
     for def in BINARIES {
-        let exists = std::path::Path::new(def.path).exists();
-        let executable = exists && runner::is_executable(def.path);
+        let resolved = def.resolve_path();
+        let path_str = resolved
+            .as_deref()
+            .unwrap_or(def.preferred_path);
+        let exists = resolved.is_some();
+        let executable = exists && runner::is_executable(path_str);
 
         let (version, version_ok) = if executable {
-            let result = runner::run(def.path, &["--version"]);
+            let result = runner::run(path_str, &["--version"]);
             if result.success {
                 let ver = if result.stdout.is_empty() {
                     result.stderr.lines().next().map(String::from)
@@ -28,15 +32,15 @@ pub fn run() -> SmokeResult {
             }
         } else {
             if exists {
-                eprintln!("  FAIL: {} not executable at {}", def.name, def.path);
+                eprintln!("  FAIL: {} not executable at {path_str}", def.name);
             } else {
-                eprintln!("  FAIL: {} not found at {}", def.name, def.path);
+                eprintln!("  FAIL: {} not found (checked {} and PATH)", def.name, def.preferred_path);
             }
             (None, false)
         };
 
         let help_ok = if executable {
-            let result = runner::run(def.path, &["--help"]);
+            let result = runner::run(path_str, &["--help"]);
             result.success
         } else {
             false
@@ -53,7 +57,7 @@ pub fn run() -> SmokeResult {
 
         binaries.push(BinarySmoke {
             name: def.name.to_string(),
-            path: def.path.to_string(),
+            path: path_str.to_string(),
             exists,
             executable,
             version,

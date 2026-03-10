@@ -23,11 +23,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 1 smoke tests
-  status: planned
+  status: inprogress
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:06Z
-  updated: 2026-03-10T10:39:06Z
+  updated: 2026-03-10T10:50:10.017357818+00:00
   spec: null
   acceptance_criteria:
   - 'Implement --version and --help checks for all 8 binaries (forjar, pmat, copia, pzsh, trueno-rag, whisper-apr, apr, batuta). Output smoke.json artifact. Gate: any failure = red.'
@@ -40,11 +40,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 2 hardware probe
-  status: planned
+  status: inprogress
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:08Z
-  updated: 2026-03-10T10:39:08Z
+  updated: 2026-03-10T10:50:24.840283434+00:00
   spec: null
   acceptance_criteria:
   - 'Probe jetson hardware: nvidia-smi, nvcc, vulkaninfo, NEON, JetPack, power mode, memory, disk. Output hardware.json artifact.'
@@ -57,11 +57,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 3 functional tests
-  status: planned
+  status: inprogress
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:10Z
-  updated: 2026-03-10T10:39:10Z
+  updated: 2026-03-10T10:50:27.309394086+00:00
   spec: null
   acceptance_criteria:
   - 'M1: apr check + inference. M5: whisper-apr transcribe. Plus smoke tests for forjar, pmat, copia, pzsh, trueno-rag, batuta. Output functional.json.'
@@ -74,11 +74,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 4 integration tests
-  status: planned
+  status: inprogress
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:11Z
-  updated: 2026-03-10T10:39:11Z
+  updated: 2026-03-10T10:50:28.170676142+00:00
   spec: null
   acceptance_criteria:
   - 'M2: apr serve + health check. M3: probador correctness (6 tests). M4: probador load test. M6: whisper-apr + trueno-rag pipeline. Output integration.json.'
@@ -91,11 +91,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: Implement tier 5 performance baselines
-  status: planned
+  status: inprogress
   priority: medium
   assigned_to: null
   created: 2026-03-10T10:39:13Z
-  updated: 2026-03-10T10:39:13Z
+  updated: 2026-03-10T10:50:28.849152979+00:00
   spec: null
   acceptance_criteria:
   - Inference tok/s, whisper RTF, RAG query latency, memory watermark. 7-day regression detection. Output performance.json.
@@ -116,6 +116,40 @@ roadmap:
   spec: null
   acceptance_criteria:
   - Schedule 06:00 UTC on self-hosted jetson runner. Build cohete, run verify, commit artifacts to history/.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-008
+  github_issue: null
+  item_type: task
+  title: Fix binary path resolution — check PATH fallback
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:54:04Z
+  updated: 2026-03-10T10:54:07.415079299+00:00
+  spec: null
+  acceptance_criteria:
+  - Hardcoded paths fail on dev machines. Check hardcoded path first (jetson), then fall back to which(1) PATH lookup for local dogfooding.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-009
+  github_issue: null
+  item_type: task
+  title: 'Fix dogfood issues: apr check, CUDA parse, copia sync, pzsh'
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:56:41Z
+  updated: 2026-03-10T10:56:41Z
+  spec: null
+  acceptance_criteria:
+  - 'Dogfooding on intel revealed 5 bugs: apr check needs FILE arg, nvidia-smi CUDA parsing gets pipe char, copia sync trailing slash error, hardware tier requires NEON (x86 can''t have it), pzsh eval doesn''t exist.'
   phases: []
   subtasks: []
   estimated_effort: null

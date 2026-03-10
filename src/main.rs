@@ -30,6 +30,11 @@ enum Cli {
         /// Print results to stdout instead of writing files.
         #[arg(long, default_value_t = false)]
         stdout: bool,
+
+        /// Continue past tier 1 even if some binaries are missing.
+        /// Missing binaries are reported as warnings, not failures.
+        #[arg(long, default_value_t = false)]
+        allow_missing: bool,
     },
 }
 
@@ -41,15 +46,16 @@ fn main() {
             output,
             max_tier,
             stdout,
+            allow_missing,
         } => {
             let max = max_tier.unwrap_or(5).clamp(1, 5);
-            let result = run_verify(&output, max, stdout);
+            let result = run_verify(&output, max, stdout, allow_missing);
             std::process::exit(i32::from(!result));
         }
     }
 }
 
-fn run_verify(output: &Path, max_tier: u8, stdout: bool) -> bool {
+fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) -> bool {
     let started = chrono::Utc::now();
 
     if !stdout {
@@ -64,11 +70,14 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool) -> bool {
     let smoke = tier1_smoke::run();
     emit("smoke.json", &smoke, output, stdout);
 
-    if !smoke.pass {
-        eprintln!("FATAL: tier 1 smoke failed — aborting");
+    if !smoke.pass && !allow_missing {
+        eprintln!("FATAL: tier 1 smoke failed — aborting (use --allow-missing to continue)");
         let summary = types::Summary::new(started, false, &smoke, None, None, None, None);
         emit("summary.json", &summary, output, stdout);
         return false;
+    }
+    if !smoke.pass && allow_missing {
+        eprintln!("WARN: tier 1 smoke has failures — continuing (--allow-missing)");
     }
 
     // Tier 2: Hardware

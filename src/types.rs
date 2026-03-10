@@ -6,19 +6,43 @@ use serde::Serialize;
 /// Binary definition — what cohete expects to find installed.
 pub struct BinaryDef {
     pub name: &'static str,
-    pub path: &'static str,
+    /// Preferred path (where forjar installs on jetson).
+    pub preferred_path: &'static str,
+}
+
+impl BinaryDef {
+    /// Resolve the actual binary path: preferred path first, then PATH lookup.
+    pub fn resolve_path(&self) -> Option<String> {
+        // Check preferred path first (jetson installs by forjar)
+        if std::path::Path::new(self.preferred_path).exists() {
+            return Some(self.preferred_path.to_string());
+        }
+        // Fall back to PATH lookup (dev machines, cargo install, etc.)
+        which(self.name)
+    }
+}
+
+/// Look up a binary on PATH via `which`.
+fn which(name: &str) -> Option<String> {
+    std::process::Command::new("which")
+        .arg(name)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 /// All binaries in the matrix.
 pub const BINARIES: &[BinaryDef] = &[
-    BinaryDef { name: "apr", path: "/home/noah/.cargo/bin/apr" },
-    BinaryDef { name: "whisper-apr", path: "/home/noah/.cargo/bin/whisper-apr" },
-    BinaryDef { name: "trueno-rag", path: "/home/noah/.cargo/bin/trueno-rag" },
-    BinaryDef { name: "forjar", path: "/home/noah/.cargo/bin/forjar" },
-    BinaryDef { name: "pmat", path: "/home/noah/.cargo/bin/pmat" },
-    BinaryDef { name: "copia", path: "/home/noah/.cargo/bin/copia" },
-    BinaryDef { name: "pzsh", path: "/home/noah/.cargo/bin/pzsh" },
-    BinaryDef { name: "batuta", path: "/home/noah/.cargo/bin/batuta" },
+    BinaryDef { name: "apr", preferred_path: "/home/noah/.cargo/bin/apr" },
+    BinaryDef { name: "whisper-apr", preferred_path: "/home/noah/.cargo/bin/whisper-apr" },
+    BinaryDef { name: "trueno-rag", preferred_path: "/home/noah/.cargo/bin/trueno-rag" },
+    BinaryDef { name: "forjar", preferred_path: "/home/noah/.cargo/bin/forjar" },
+    BinaryDef { name: "pmat", preferred_path: "/home/noah/.cargo/bin/pmat" },
+    BinaryDef { name: "copia", preferred_path: "/home/noah/.cargo/bin/copia" },
+    BinaryDef { name: "pzsh", preferred_path: "/home/noah/.cargo/bin/pzsh" },
+    BinaryDef { name: "batuta", preferred_path: "/home/noah/.cargo/bin/batuta" },
 ];
 
 pub const MODEL_PATH: &str = "/home/noah/data/models/canary/qwen-1.5b-q4k.apr";

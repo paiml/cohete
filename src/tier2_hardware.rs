@@ -12,7 +12,9 @@ pub fn run() -> HardwareResult {
     let power_mode = probe_power_mode();
     let jetpack = probe_jetpack();
 
-    let pass = cpu.neon && memory.total_mb >= 7000;
+    // On jetson (aarch64): require NEON + 7GB. On x86_64: just check memory.
+    let is_aarch64 = std::env::consts::ARCH == "aarch64";
+    let pass = (!is_aarch64 || cpu.neon) && memory.total_mb >= 7000;
 
     HardwareResult {
         tier: 2,
@@ -35,7 +37,7 @@ fn probe_gpu() -> Option<GpuInfo> {
     let model = result.stdout.lines().next().unwrap_or("unknown").trim().to_string();
 
     let cuda_version = {
-        let r = runner::shell("nvidia-smi | grep 'CUDA Version' | awk '{print $NF}'");
+        let r = runner::shell("nvidia-smi | grep 'CUDA Version' | sed 's/.*CUDA Version: *//;s/ .*//'");
         if r.success && !r.stdout.is_empty() {
             Some(r.stdout.trim().to_string())
         } else {

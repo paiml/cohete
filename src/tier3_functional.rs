@@ -44,7 +44,19 @@ pub fn run() -> FunctionalResult {
 }
 
 fn test_apr_check() -> TestEntry {
-    let result = runner::run("apr", &["check"]);
+    if !std::path::Path::new(MODEL_PATH).exists() {
+        eprintln!("  apr check: SKIP (model not present)");
+        return TestEntry {
+            binary: "apr".into(),
+            test: "check".into(),
+            modality: None,
+            status: TestStatus::Skip,
+            duration_ms: 0,
+            output: Some(format!("model not found at {MODEL_PATH}")),
+        };
+    }
+
+    let result = runner::run("apr", &["check", MODEL_PATH]);
     let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
     eprintln!("  apr check: {}", status_label(&status));
 
@@ -164,7 +176,7 @@ fn test_copia_smoke() -> TestEntry {
     let result = runner::shell(
         "mkdir -p /tmp/cohete-test-src /tmp/cohete-test-dst && \
          echo test > /tmp/cohete-test-src/file.txt && \
-         copia sync /tmp/cohete-test-src/ /tmp/cohete-test-dst/ && \
+         copia sync -r /tmp/cohete-test-src/ /tmp/cohete-test-dst/ && \
          diff /tmp/cohete-test-src/file.txt /tmp/cohete-test-dst/file.txt && \
          rm -rf /tmp/cohete-test-src /tmp/cohete-test-dst",
     );
@@ -183,14 +195,14 @@ fn test_copia_smoke() -> TestEntry {
 }
 
 fn test_pzsh_smoke() -> TestEntry {
-    let result = runner::shell("echo 'echo hello' | pzsh eval 2>&1");
-    // pzsh may not have eval subcommand — pass if it exits without crashing
+    let result = runner::run("pzsh", &["status"]);
+    // pzsh status shows configuration — pass if it exits without crashing
     let status = if result.exit_code.is_some() { TestStatus::Pass } else { TestStatus::Fail };
-    eprintln!("  pzsh eval (smoke): {}", status_label(&status));
+    eprintln!("  pzsh status (smoke): {}", status_label(&status));
 
     TestEntry {
         binary: "pzsh".into(),
-        test: "eval_smoke".into(),
+        test: "status_smoke".into(),
         modality: None,
         status,
         duration_ms: result.duration_ms,

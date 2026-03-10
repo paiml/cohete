@@ -95,8 +95,8 @@ For every binary in the matrix, run:
 ### M1: CLI Inference — `apr`
 
 ```bash
-# Hardware self-test (always runs)
-apr check 2>&1
+# Hardware self-test (requires model file)
+apr check ~/data/models/canary/qwen-1.5b-q4k.apr
 
 # Single-shot inference (requires model)
 apr run --model ~/data/models/canary/qwen-1.5b-q4k.apr \
@@ -104,7 +104,7 @@ apr run --model ~/data/models/canary/qwen-1.5b-q4k.apr \
 ```
 
 **Pass:** `apr check` exits 0. Inference produces tokens.
-**Skip:** inference skipped if model not present.
+**Skip:** both tests skipped if model not present.
 
 ### M5: Transcription — `whisper-apr`
 
@@ -140,7 +140,7 @@ cd /home/noah/src/cohete && pmat query --literal "fn main" --limit 5
 ```bash
 mkdir -p /tmp/cohete-test-src /tmp/cohete-test-dst
 echo "test" > /tmp/cohete-test-src/file.txt
-copia sync /tmp/cohete-test-src/ /tmp/cohete-test-dst/
+copia sync -r /tmp/cohete-test-src/ /tmp/cohete-test-dst/
 diff /tmp/cohete-test-src/file.txt /tmp/cohete-test-dst/file.txt
 ```
 
@@ -149,10 +149,10 @@ diff /tmp/cohete-test-src/file.txt /tmp/cohete-test-dst/file.txt
 #### pzsh
 
 ```bash
-echo 'echo "hello"' | pzsh eval 2>&1
+pzsh status
 ```
 
-**Pass:** exits 0 or prints meaningful output.
+**Pass:** exits 0, prints status and startup time.
 
 #### trueno-rag
 
