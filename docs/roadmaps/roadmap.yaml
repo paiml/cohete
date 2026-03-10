@@ -1,0 +1,123 @@
+roadmap_version: '1.0'
+github_enabled: true
+github_repo: paiml/cohete
+roadmap:
+- id: PMAT-001
+  github_issue: null
+  item_type: task
+  title: Delete old library code and scaffold E2E binary
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:38:59Z
+  updated: 2026-03-10T10:39:20.372252316+00:00
+  spec: null
+  acceptance_criteria:
+  - 'Remove all old src/ files (device.rs, thermal.rs, memory.rs, fleet.rs, power.rs, storage.rs, ssh.rs, config.rs, provision.rs, quantize.rs, error.rs, lib.rs), old spec, old book, old Cargo.toml deps. Create new thin binary: src/main.rs with CLI (cohete verify). Update Cargo.toml for minimal deps.'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-002
+  github_issue: null
+  item_type: task
+  title: Implement tier 1 smoke tests
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:39:06Z
+  updated: 2026-03-10T10:39:06Z
+  spec: null
+  acceptance_criteria:
+  - 'Implement --version and --help checks for all 8 binaries (forjar, pmat, copia, pzsh, trueno-rag, whisper-apr, apr, batuta). Output smoke.json artifact. Gate: any failure = red.'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-003
+  github_issue: null
+  item_type: task
+  title: Implement tier 2 hardware probe
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:39:08Z
+  updated: 2026-03-10T10:39:08Z
+  spec: null
+  acceptance_criteria:
+  - 'Probe jetson hardware: nvidia-smi, nvcc, vulkaninfo, NEON, JetPack, power mode, memory, disk. Output hardware.json artifact.'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-004
+  github_issue: null
+  item_type: task
+  title: Implement tier 3 functional tests
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:39:10Z
+  updated: 2026-03-10T10:39:10Z
+  spec: null
+  acceptance_criteria:
+  - 'M1: apr check + inference. M5: whisper-apr transcribe. Plus smoke tests for forjar, pmat, copia, pzsh, trueno-rag, batuta. Output functional.json.'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-005
+  github_issue: null
+  item_type: task
+  title: Implement tier 4 integration tests
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:39:11Z
+  updated: 2026-03-10T10:39:11Z
+  spec: null
+  acceptance_criteria:
+  - 'M2: apr serve + health check. M3: probador correctness (6 tests). M4: probador load test. M6: whisper-apr + trueno-rag pipeline. Output integration.json.'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-006
+  github_issue: null
+  item_type: task
+  title: Implement tier 5 performance baselines
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:39:13Z
+  updated: 2026-03-10T10:39:13Z
+  spec: null
+  acceptance_criteria:
+  - Inference tok/s, whisper RTF, RAG query latency, memory watermark. 7-day regression detection. Output performance.json.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: PMAT-007
+  github_issue: null
+  item_type: task
+  title: Add nightly-e2e.yml GitHub Actions workflow
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-03-10T10:39:15Z
+  updated: 2026-03-10T10:39:15Z
+  spec: null
+  acceptance_criteria:
+  - Schedule 06:00 UTC on self-hosted jetson runner. Build cohete, run verify, commit artifacts to history/.
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
