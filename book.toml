@@ -1,0 +1,15 @@
+[book]
+title = "Cohete"
+description = "Nightly E2E verification for the sovereign AI stack on edge hardware"
+authors = ["paiml"]
+language = "en"
+src = "book/src"
+
+[build]
+build-dir = "book/out"
+
+[output.html]
+git-repository-url = "https://github.com/paiml/cohete"
+edit-url-template = "https://github.com/paiml/cohete/edit/main/{path}"
+default-theme = "light"
+preferred-dark-theme = "ayu"
