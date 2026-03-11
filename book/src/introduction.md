@@ -18,7 +18,7 @@ executes 5 tiers of tests against pre-installed binaries:
 | 1 | **Smoke** | All 8 binaries installed and respond to `--version` |
 | 2 | **Hardware** | GPU, CUDA, Vulkan, NEON present and functional |
 | 3 | **Functional** | Inference works across GGUF/APR formats on GPU/CPU |
-| 4 | **Integration** | Chat server, correctness, load test, RAG pipeline |
+| 4 | **Integration** | Chat server, correctness, UAT (19 scenarios), load test, RAG |
 | 5 | **Performance** | tok/s baseline, regression detection |
 
 Total runtime: **< 5 minutes**.
@@ -35,6 +35,21 @@ Six modalities of the sovereign AI stack on edge:
 | M4 | Load Test | Concurrent requests without OOM |
 | M5 | Transcription | Audio to text on ARM NEON |
 | M6 | RAG Pipeline | Transcribe, index, query end-to-end |
+
+## User Acceptance Testing (UAT)
+
+Beyond verifying that the model *runs*, cohete proves it *works* for real-world
+problem solving via 19 UAT scenarios across 4 suites:
+
+| Suite | Scenarios | What It Tests |
+|-------|-----------|---------------|
+| U1 | 5 | Chat problem solving: CSV parsing, error handling, tests, debugging, algorithms |
+| U2 | 6 | Serve API validation: predict, streaming, error handling, models, health |
+| U3 | 4 | Kernel provability: reflexivity, cardinality, format parity, token stability |
+| U4 | 4 | Task chaining: multi-turn context, refinement, RAG-augmented, error correction |
+
+UAT runs inside tier 4, sharing the `apr serve` instance. See the
+[UAT spec](./spec/uat-apr-model.md) for details.
 
 ## What It Does NOT Do
 

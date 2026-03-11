@@ -68,6 +68,31 @@ pub fn run(config: &ModelConfig) -> UatResult {
     UatResult { pass: failed == 0, total, passed, failed, u1, u2, u3, u4 }
 }
 
+/// Build the chat completions URL for the running server.
+fn chat_url() -> String {
+    format!("http://localhost:{SERVE_PORT}/v1/chat/completions")
+}
+
+/// POST a chat completion request and extract the assistant content.
+fn chat_complete(body: &serde_json::Value) -> runner::CmdResult {
+    runner::curl_post(&chat_url(), &body.to_string())
+}
+
+/// Extract assistant content from an OpenAI-compatible chat completion response.
+fn extract_content(json_str: &str) -> String {
+    serde_json::from_str::<serde_json::Value>(json_str)
+        .ok()
+        .and_then(|v| {
+            v.get("choices")
+                .and_then(|c| c.get(0))
+                .and_then(|c| c.get("message"))
+                .and_then(|m| m.get("content"))
+                .and_then(|s| s.as_str())
+                .map(String::from)
+        })
+        .unwrap_or_default()
+}
+
 // ─── U1: Chat Problem Solving ──────────────────────────────
 
 type ChatScenario = (&'static str, &'static str, fn(&str) -> bool);
@@ -112,12 +137,7 @@ fn run_chat_suite(scenarios: &[ChatScenario]) -> UatSuite {
             "temperature": 0
         });
 
-        let cmd = format!(
-            "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-             -H 'Content-Type: application/json' \
-             -d '{body}'"
-        );
-        let result = runner::shell(&cmd);
+        let result = chat_complete(&body);
 
         let pass = if result.success {
             check_fn(&extract_content(&result.stdout))
@@ -136,21 +156,6 @@ fn run_chat_suite(scenarios: &[ChatScenario]) -> UatSuite {
     #[allow(clippy::cast_possible_truncation)]
     let total = scenarios.len() as u32;
     UatSuite { pass: passed == total, total, passed, scenarios: results }
-}
-
-/// Extract assistant content from an OpenAI-compatible chat completion response.
-fn extract_content(json_str: &str) -> String {
-    serde_json::from_str::<serde_json::Value>(json_str)
-        .ok()
-        .and_then(|v| {
-            v.get("choices")
-                .and_then(|c| c.get(0))
-                .and_then(|c| c.get("message"))
-                .and_then(|m| m.get("content"))
-                .and_then(|s| s.as_str())
-                .map(String::from)
-        })
-        .unwrap_or_default()
 }
 
 // ─── U2: Serve API Validation ──────────────────────────────
@@ -179,10 +184,7 @@ fn check_u2_predict() -> UatScenario {
         "messages": [{"role": "user", "content": "Say hello"}],
         "max_tokens": 16, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let pass = r.success && !extract_content(&r.stdout).is_empty();
     eprintln!("    U2-001: {}", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U2-001".into(), pass, duration_ms: r.duration_ms, detail: None }
@@ -194,21 +196,15 @@ fn check_u2_streaming() -> UatScenario {
         "messages": [{"role": "user", "content": "Hi"}],
         "max_tokens": 8, "temperature": 0, "stream": true
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let pass = r.success && (r.stdout.contains("data:") || r.stdout.contains("[DONE]"));
     eprintln!("    U2-002: {}", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U2-002".into(), pass, duration_ms: r.duration_ms, detail: None }
 }
 
 fn check_u2_invalid_json() -> UatScenario {
-    let r = runner::shell(&format!(
-        "curl -s -o /dev/null -w '%{{http_code}}' -X POST \
-         http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{{bad'"
-    ));
+    let url = chat_url();
+    let r = runner::curl_post_status(&url, "{bad");
     let pass = !r.stdout.is_empty() && r.stdout != "000";
     eprintln!("    U2-003: {} (status {})", if pass { "PASS" } else { "FAIL" }, r.stdout);
     UatScenario {
@@ -218,11 +214,8 @@ fn check_u2_invalid_json() -> UatScenario {
 }
 
 fn check_u2_missing_field() -> UatScenario {
-    let r = runner::shell(&format!(
-        "curl -s -o /dev/null -w '%{{http_code}}' -X POST \
-         http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{{\"messages\":[]}}'"
-    ));
+    let url = chat_url();
+    let r = runner::curl_post_status(&url, r#"{"messages":[]}"#);
     let pass = !r.stdout.is_empty() && r.stdout != "000";
     eprintln!("    U2-004: {} (status {})", if pass { "PASS" } else { "FAIL" }, r.stdout);
     UatScenario {
@@ -232,20 +225,26 @@ fn check_u2_missing_field() -> UatScenario {
 }
 
 fn check_u2_models() -> UatScenario {
-    let r = runner::shell(&format!("curl -sf http://localhost:{SERVE_PORT}/v1/models"));
+    let r = runner::curl_get(&format!("http://localhost:{SERVE_PORT}/v1/models"));
     let pass = r.success && (r.stdout.contains("model") || r.stdout.contains("id"));
     eprintln!("    U2-005: {}", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U2-005".into(), pass, duration_ms: r.duration_ms, detail: None }
 }
 
 fn check_u2_health_rapid() -> UatScenario {
-    let r = runner::shell(&format!(
-        "for i in $(seq 1 10); do \
-           curl -sf http://localhost:{SERVE_PORT}/health > /dev/null || exit 1; \
-         done"
-    ));
-    eprintln!("    U2-006: {}", if r.success { "PASS" } else { "FAIL" });
-    UatScenario { id: "U2-006".into(), pass: r.success, duration_ms: r.duration_ms, detail: None }
+    let url = format!("http://localhost:{SERVE_PORT}/health");
+    let mut all_ok = true;
+    let start = std::time::Instant::now();
+    for _ in 0..10 {
+        let r = runner::curl_get(&url);
+        if !r.success {
+            all_ok = false;
+            break;
+        }
+    }
+    let ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
+    eprintln!("    U2-006: {}", if all_ok { "PASS" } else { "FAIL" });
+    UatScenario { id: "U2-006".into(), pass: all_ok, duration_ms: ms, detail: None }
 }
 
 // ─── U3: Kernel Provability ────────────────────────────────
@@ -270,16 +269,12 @@ fn check_u3_reflexivity() -> UatScenario {
     let body = serde_json::json!({
         "model": "default",
         "messages": [{"role": "user", "content": "What is 2+2?"}],
-        "max_tokens": 16, "temperature": 0, "seed": 42
+        "max_tokens": 16, "temperature": 0
     });
-    let cmd = format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    );
 
-    let r1 = runner::shell(&cmd);
-    let r2 = runner::shell(&cmd);
-    let r3 = runner::shell(&cmd);
+    let r1 = chat_complete(&body);
+    let r2 = chat_complete(&body);
+    let r3 = chat_complete(&body);
 
     let c1 = extract_content(&r1.stdout);
     let c2 = extract_content(&r2.stdout);
@@ -301,10 +296,7 @@ fn check_u3_cardinality() -> UatScenario {
         "messages": [{"role": "user", "content": "Count from 1 to 100"}],
         "max_tokens": 8, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let content = extract_content(&r.stdout);
     let word_count = content.split_whitespace().count();
     let pass = r.success && word_count <= 30;
@@ -345,10 +337,7 @@ fn check_u3_token_stability() -> UatScenario {
         "messages": [{"role": "user", "content": "What is 2+2? Answer with just the number."}],
         "max_tokens": 8, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let pass = extract_content(&r.stdout).contains('4');
     eprintln!("    U3-004: {} (token stability)", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U3-004".into(), pass, duration_ms: r.duration_ms, detail: None }
@@ -382,10 +371,7 @@ fn check_u4_two_turn() -> UatScenario {
         ],
         "max_tokens": 32, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let pass = extract_content(&r.stdout).contains("42");
     eprintln!("    U4-001: {} (two-turn context)", if pass { "PASS" } else { "FAIL" });
     UatScenario {
@@ -404,10 +390,7 @@ fn check_u4_refinement() -> UatScenario {
         ],
         "max_tokens": 256, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let l = extract_content(&r.stdout).to_lowercase();
     let pass = l.contains("arg") || l.contains("clap") || l.contains("name") || l.contains("--");
     eprintln!("    U4-002: {} (refinement)", if pass { "PASS" } else { "FAIL" });
@@ -436,10 +419,7 @@ fn check_u4_rag_augmented() -> UatScenario {
         ],
         "max_tokens": 64, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let pass = !extract_content(&r.stdout).is_empty();
     eprintln!("    U4-003: {} (RAG-augmented)", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U4-003".into(), pass, duration_ms: r.duration_ms, detail: None }
@@ -451,10 +431,7 @@ fn check_u4_error_correction() -> UatScenario {
         "messages": [{"role": "user", "content": "1+1=3, right?"}],
         "max_tokens": 64, "temperature": 0
     });
-    let r = runner::shell(&format!(
-        "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-         -H 'Content-Type: application/json' -d '{body}'"
-    ));
+    let r = chat_complete(&body);
     let l = extract_content(&r.stdout).to_lowercase();
     let pass = l.contains('2')
         && (l.contains("not") || l.contains("incorrect") || l.contains("actually") || !l.contains("yes"));

@@ -227,6 +227,21 @@ curl -sf -X POST http://localhost:8090/v1/chat/completions \
 **Pass:** All 6 tests pass (basic_math, python_fibonacci, rust_hello,
 json_output, code_explanation, sql_query).
 
+### UAT: User Acceptance Testing (19 scenarios)
+
+After M3 and before M4, UAT runs 19 scenarios across 4 suites while the
+server is still alive:
+
+- **U1** (5): Chat problem solving — CSV parsing, error handling, tests, debugging, algorithms
+- **U2** (6): Serve API validation — predict, streaming, error handling, models, health
+- **U3** (4): Kernel provability — reflexivity, cardinality, format parity, token stability
+- **U4** (4): Task chaining — multi-turn context, refinement, RAG-augmented, error correction
+
+All requests use `temperature: 0` for determinism and `runner::curl_post()`
+for reliability (direct `Command` args, no shell quoting).
+
+See [UAT: APR Model Acceptance](./uat-apr-model.md) for full scenario definitions.
+
 ### M4: Load Test
 
 ```bash
@@ -336,7 +351,7 @@ tier 2 (hardware)
 tier 3 (functional) — M1: CLI inference, M5: transcription
     │ always continues
     ▼
-tier 4 (integration) — M2: server, M3: correctness, M4: load, M6: RAG pipeline
+tier 4 (integration) — M2: server, M3: correctness, UAT (19), M4: load, M6: RAG
     │ always continues
     ▼
 tier 5 (performance) — baselines for M1, M5, M6

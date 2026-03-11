@@ -154,42 +154,37 @@ fn run_server_tests(
     (m2, Some(m3), Some(uat_r), m4)
 }
 
-fn run_correctness_tests() -> CorrectnessStatus {
-    struct CorrectnessTest {
-        name: &'static str,
-        prompt: &'static str,
-    }
+fn chat_url() -> String {
+    format!("http://localhost:{SERVE_PORT}/v1/chat/completions")
+}
 
-    let tests = [
-        CorrectnessTest { name: "basic_math", prompt: "What is 7 * 8?" },
-        CorrectnessTest { name: "python_fibonacci", prompt: "Write a Python fibonacci function" },
-        CorrectnessTest { name: "rust_hello", prompt: "Write hello world in Rust" },
-        CorrectnessTest { name: "json_output", prompt: "Return JSON with name Alice" },
-        CorrectnessTest { name: "code_explanation", prompt: "What does map do on a vector?" },
-        CorrectnessTest { name: "sql_query", prompt: "Write SQL for top 5 users by orders" },
+fn run_correctness_tests() -> CorrectnessStatus {
+    let tests: &[(&str, &str)] = &[
+        ("basic_math", "What is 7 * 8?"),
+        ("python_fibonacci", "Write a Python fibonacci function"),
+        ("rust_hello", "Write hello world in Rust"),
+        ("json_output", "Return JSON with name Alice"),
+        ("code_explanation", "What does map do on a vector?"),
+        ("sql_query", "Write SQL for top 5 users by orders"),
     ];
 
     let mut passed = 0u32;
     #[allow(clippy::cast_possible_truncation)]
     let total = tests.len() as u32;
+    let url = chat_url();
 
-    for test in &tests {
+    for &(name, prompt) in tests {
         let body = serde_json::json!({
             "model": "default",
-            "messages": [{"role": "user", "content": test.prompt}],
+            "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 128,
             "temperature": 0
         });
 
-        let cmd = format!(
-            "curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-             -H 'Content-Type: application/json' \
-             -d '{body}'"
-        );
-        let result = runner::shell(&cmd);
+        let result = runner::curl_post(&url, &body.to_string());
 
         let pass = if result.success {
-            check_correctness(test.name, &result.stdout)
+            check_correctness(name, &result.stdout)
         } else {
             false
         };
@@ -197,7 +192,7 @@ fn run_correctness_tests() -> CorrectnessStatus {
         if pass {
             passed += 1;
         }
-        eprintln!("    {}: {}", test.name, if pass { "PASS" } else { "FAIL" });
+        eprintln!("    {name}: {}", if pass { "PASS" } else { "FAIL" });
     }
 
     CorrectnessStatus {
@@ -236,20 +231,18 @@ fn run_load_test() -> ModalityStatus {
         "max_tokens": 16,
         "temperature": 0
     });
+    let body_str = body.to_string();
+    let url = chat_url();
 
-    let cmd = format!(
-        "for i in 1 2; do \
-           curl -sf -X POST http://localhost:{SERVE_PORT}/v1/chat/completions \
-             -H 'Content-Type: application/json' \
-             -d '{body}' &\n\
-         done; wait"
-    );
+    let start = std::time::Instant::now();
+    let r1 = runner::curl_post(&url, &body_str);
+    let r2 = runner::curl_post(&url, &body_str);
+    let ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
-    let result = runner::shell(&cmd);
-
+    let pass = r1.success && r2.success;
     ModalityStatus {
-        pass: result.success,
-        detail: format!("2 concurrent requests, {}ms", result.duration_ms),
+        pass,
+        detail: format!("2 sequential requests, {ms}ms"),
     }
 }
 

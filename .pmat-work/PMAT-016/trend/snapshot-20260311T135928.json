@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-03-11T13:59:28.912443999Z",
+  "score": 0.625,
+  "grade": "C",
+  "active_claims": 22,
+  "verified_claims": 0,
+  "bounded_drift": 0.5555555555555556,
+  "git_sha": "4b7ba1adf9b0dc932e408ce668081c0c4cda9a4e"
+}

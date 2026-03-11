@@ -54,6 +54,31 @@ pub fn spawn(program: &str, args: &[&str]) -> Option<std::process::Child> {
         .ok()
 }
 
+/// POST JSON to a URL via curl, bypassing shell quoting.
+/// Returns the raw response body on success.
+pub fn curl_post(url: &str, json_body: &str) -> CmdResult {
+    run("curl", &[
+        "-sf", "-X", "POST", url,
+        "-H", "Content-Type: application/json",
+        "-d", json_body,
+    ])
+}
+
+/// GET a URL via curl, bypassing shell quoting.
+pub fn curl_get(url: &str) -> CmdResult {
+    run("curl", &["-sf", url])
+}
+
+/// POST to a URL and return the HTTP status code (even for errors).
+pub fn curl_post_status(url: &str, body: &str) -> CmdResult {
+    run("curl", &[
+        "-s", "-o", "/dev/null", "-w", "%{http_code}",
+        "-X", "POST", url,
+        "-H", "Content-Type: application/json",
+        "-d", body,
+    ])
+}
+
 /// Check if a file exists and is executable.
 pub fn is_executable(path: &str) -> bool {
     std::fs::metadata(path)
