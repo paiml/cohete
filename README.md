@@ -12,7 +12,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 ```
 
 <!-- NIGHTLY:BEGIN -->
-*Last run: **2026-03-11** — **FAIL** (149s)*
+*Last run: **2026-03-11** — **FAIL** (965s)*
 
 ### Tier Results
 
@@ -20,8 +20,8 @@ One binary, five tiers, falsifiable JSON artifacts.
 |------|------|--------|--------|--------|---------|
 | 1 | Smoke | ✅ | 8 | 0 | 0 |
 | 2 | Hardware | ❌ | 0 | 1 | 0 |
-| 3 | Functional | ❌ | 3 | 5 | 2 |
-| 4 | Integration | ❌ | 0 | 2 | 2 |
+| 3 | Functional | ❌ | 6 | 2 | 2 |
+| 4 | Integration | ✅ | 22 | 0 | 1 |
 | 5 | Performance | ✅ | 0 regressions | — | — |
 
 ### Binary Versions
@@ -41,8 +41,19 @@ One binary, five tiers, falsifiable JSON artifacts.
 
 |        | GPU | CPU |
 |--------|-----|-----|
-| **GGUF** | ❌ 27.1s | ❌ 27.1s |
+| **GGUF** | ❌ 17.8s | ✅ 13.7s |
 | **APR** | — | — |
+
+### Correctness (M3): 6/6 passed
+
+### UAT: Real-World Problem Solving
+
+| Suite | Passed | Total | Status |
+|-------|--------|-------|--------|
+| U1 Chat Solving | 5 | 5 | ✅ |
+| U2 API Validation | 6 | 6 | ✅ |
+| U3 Kernel Provability | 4 | 4 | ✅ |
+| U4 Task Chaining | 4 | 4 | ✅ |
 
 ### Performance
 
