@@ -78,7 +78,9 @@ fn probe_disk() -> bool {
 }
 
 fn probe_cpu() -> CpuInfo {
-    let neon = runner::shell("grep -q neon /proc/cpuinfo && echo yes || echo no");
+    // ARMv7 reports "neon", ARMv8/aarch64 reports "asimd" (Advanced SIMD).
+    // Both indicate NEON/SIMD support.
+    let neon = runner::shell("grep -qE 'neon|asimd' /proc/cpuinfo && echo yes || echo no");
     let neon_available = neon.stdout.trim() == "yes";
 
     let cores_result = runner::shell("nproc");
