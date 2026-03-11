@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="280" viewBox="0 0 880 280">
+<defs>
+  <style>
+    text { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+    .arrow { fill: none; stroke: #cbd5e1; stroke-width: 2; marker-end: url(#ah); }
+  </style>
+  <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6" fill="#cbd5e1"/>
+  </marker>
+</defs>
+
+<!-- background -->
+<rect width="880" height="280" rx="12" fill="#ffffff"/>
+
+<!-- title -->
+<text x="440" y="44" text-anchor="middle" font-size="28" font-weight="700" fill="#0f172a">&#9670; COHETE</text>
+<text x="440" y="66" text-anchor="middle" font-size="13" fill="#64748b">Nightly verification for the sovereign AI stack on edge hardware</text>
+
+<!-- ── pipeline ── -->
+
+<rect x="52" y="92" width="160" height="68" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="132" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#0f172a">BUILD</text>
+<text x="132" y="134" text-anchor="middle" font-size="10" fill="#64748b">20 repos</text>
+<text x="132" y="148" text-anchor="middle" font-size="10" fill="#64748b">aarch64 nightly</text>
+
+<line x1="212" y1="126" x2="250" y2="126" class="arrow"/>
+
+<rect x="258" y="92" width="160" height="68" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="338" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#0f172a">SHIP</text>
+<text x="338" y="134" text-anchor="middle" font-size="10" fill="#64748b">forjar provisions</text>
+<text x="338" y="148" text-anchor="middle" font-size="10" fill="#64748b">Jetson + models</text>
+
+<line x1="418" y1="126" x2="456" y2="126" class="arrow"/>
+
+<rect x="464" y="92" width="160" height="68" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+<text x="544" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#1d4ed8">VERIFY</text>
+<text x="544" y="134" text-anchor="middle" font-size="10" fill="#64748b">cohete &#8212; 5 tiers</text>
+<text x="544" y="148" text-anchor="middle" font-size="10" fill="#64748b">on real hardware</text>
+
+<line x1="624" y1="126" x2="662" y2="126" class="arrow"/>
+
+<rect x="670" y="92" width="160" height="68" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+<text x="750" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#166534">PROVE</text>
+<text x="750" y="134" text-anchor="middle" font-size="10" fill="#64748b">JSON artifacts</text>
+<text x="750" y="148" text-anchor="middle" font-size="10" fill="#64748b">falsifiable evidence</text>
+
+<!-- ── tier strip ── -->
+
+<rect x="52"  y="192" width="144" height="28" rx="6" fill="#334155"/>
+<text x="124" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">T1 SMOKE</text>
+
+<rect x="204" y="192" width="144" height="28" rx="6" fill="#475569"/>
+<text x="276" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">T2 HARDWARE</text>
+
+<rect x="356" y="192" width="144" height="28" rx="6" fill="#1e40af"/>
+<text x="428" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">T3 FUNCTIONAL</text>
+
+<rect x="508" y="192" width="144" height="28" rx="6" fill="#1e3a8a"/>
+<text x="580" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">T4 INTEGRATION</text>
+
+<rect x="660" y="192" width="170" height="28" rx="6" fill="#0f172a"/>
+<text x="745" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">T5 PERFORMANCE</text>
+
+<!-- tier descriptions -->
+<text x="124" y="236" text-anchor="middle" font-size="9" fill="#94a3b8">8 binaries</text>
+<text x="276" y="236" text-anchor="middle" font-size="9" fill="#94a3b8">GPU &#183; CUDA &#183; NEON</text>
+<text x="428" y="236" text-anchor="middle" font-size="9" fill="#94a3b8">GGUF&#215;GPU &#183; APR&#215;CPU</text>
+<text x="580" y="236" text-anchor="middle" font-size="9" fill="#94a3b8">chat &#183; correct &#183; RAG</text>
+<text x="745" y="236" text-anchor="middle" font-size="9" fill="#94a3b8">tok/s &#183; regression</text>
+
+<!-- footer -->
+<text x="440" y="268" text-anchor="middle" font-size="10" fill="#94a3b8">Jetson Orin Nano &#183; Qwen 1.5B Q4K &#183; GGUF + APR &#183; GPU + CPU &#183; 6 modalities &#183; &lt; 5 min</text>
+
+</svg>

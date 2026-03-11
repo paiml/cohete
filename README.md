@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/status.svg" alt="Cohete Nightly Status">
+  <img src="docs/hero.svg" alt="Cohete">
 </p>
 
 # Cohete
@@ -126,14 +126,13 @@ artifacts/
 │   ├── integration.json   # tier 4: server + correctness + load + RAG
 │   ├── performance.json   # tier 5: baselines + regressions
 │   └── summary.json       # overall pass/fail + metrics
-├── history/
-│   └── YYYY-MM-DD.json    # daily snapshots
-docs/
-└── status.svg             # generated from summary.json
+└── history/
+    └── YYYY-MM-DD.json    # daily snapshots
 ```
 
-The hero SVG and README nightly section are auto-generated from these artifacts
-by `scripts/generate-status.py`. The nightly workflow commits both.
+The README nightly section (between `NIGHTLY:BEGIN`/`END` markers) is auto-generated
+from these artifacts by `scripts/generate-status.py`. The nightly workflow commits
+the updated README alongside the history snapshot.
 
 ## Specification
 
