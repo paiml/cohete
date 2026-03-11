@@ -352,7 +352,12 @@ fn truncate_output(stdout: &str, stderr: &str) -> String {
     };
 
     if combined.len() > 1024 {
-        format!("{}...(truncated)", &combined[..1024])
+        // Find nearest char boundary at or before 1024 to avoid splitting multi-byte UTF-8
+        let mut end = 1024;
+        while !combined.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}...(truncated)", &combined[..end])
     } else {
         combined
     }
