@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "date": "2026-03-11",
-  "timestamp": "2026-03-11T16:49:54.254588178Z",
+  "timestamp": "2026-03-11T17:09:30.463485527Z",
   "cohete_version": "0.1.0",
   "pass": false,
   "duration_s": 965,
@@ -21,10 +21,10 @@
       "skipped": 0
     },
     "functional": {
-      "pass": false,
+      "pass": true,
       "total": 11,
       "passed": 6,
-      "failed": 2,
+      "failed": 0,
       "skipped": 2
     },
     "integration": {
@@ -93,6 +93,6 @@
     "inference_tok_s": null,
     "whisper_rtf": null,
     "rag_query_ms": null,
-    "memory_available_mb": 5907
+    "memory_available_mb": 5915
   }
 }

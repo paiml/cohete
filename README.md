@@ -20,7 +20,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 |------|------|--------|--------|--------|---------|
 | 1 | Smoke | ✅ | 8 | 0 | 0 |
 | 2 | Hardware | ❌ | 0 | 1 | 0 |
-| 3 | Functional | ❌ | 6 | 2 | 2 |
+| 3 | Functional | ✅ | 6 | 0 | 2 |
 | 4 | Integration | ✅ | 22 | 0 | 1 |
 | 5 | Performance | ✅ | 0 regressions | — | — |
 
@@ -41,7 +41,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 
 |        | GPU | CPU |
 |--------|-----|-----|
-| **GGUF** | ❌ 17.8s | ✅ 13.7s |
+| **GGUF** | ⚠️ 18.4s | ✅ 13.3s |
 | **APR** | — | — |
 
 ### Correctness (M3): 6/6 passed
