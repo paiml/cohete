@@ -134,7 +134,8 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool, cl
         None
     };
 
-    let pass = smoke.pass
+    let smoke_ok = if allow_missing { smoke.pass_installed() } else { smoke.pass };
+    let pass = smoke_ok
         && hardware.as_ref().map_or(true, |h| h.pass)
         && functional.as_ref().map_or(true, |f| f.pass)
         && integration.as_ref().map_or(true, |i| i.pass)

@@ -6,7 +6,7 @@
 //! Plus smoke-level functional tests for infrastructure tools.
 
 use crate::runner;
-use crate::types::{FunctionalResult, ModelConfig, TestEntry, TestStatus};
+use crate::types::{self, FunctionalResult, ModelConfig, TestEntry, TestStatus};
 
 pub fn run(config: &ModelConfig) -> FunctionalResult {
     let gpu_available = runner::run("nvidia-smi", &["--query-gpu=name", "--format=csv,noheader"]).success;
@@ -42,17 +42,17 @@ pub fn run(config: &ModelConfig) -> FunctionalResult {
         tests.push(test_inference(apr, "apr", true));
     }
 
-    // GPU/CPU parity (only meaningful with GPU)
+    // GPU/CPU parity (informational — uses Warn, not Fail)
     if gpu_available {
         tests.push(test_apr_gpu_cpu_parity(config));
     }
 
     tests.extend([
         test_whisper_transcribe(config),
-        test_forjar_smoke(),
+        test_infra_smoke("forjar", "plan_smoke", &["plan", "-f", "/dev/null"]),
         test_pmat_smoke(),
         test_copia_smoke(),
-        test_pzsh_smoke(),
+        test_infra_smoke("pzsh", "status_smoke", &["status"]),
         test_trueno_rag_smoke(),
         test_batuta_smoke(),
     ]);
@@ -64,14 +64,11 @@ pub fn run(config: &ModelConfig) -> FunctionalResult {
     #[allow(clippy::cast_possible_truncation)]
     let failed = tests.iter().filter(|t| t.status == TestStatus::Fail).count() as u32;
     #[allow(clippy::cast_possible_truncation)]
+    let warned = tests.iter().filter(|t| t.status == TestStatus::Warn).count() as u32;
+    #[allow(clippy::cast_possible_truncation)]
     let total = tests.len() as u32;
 
-    // Tier 3 passes if no hard failures (skips are OK).
-    // Parity test is informational — quantized GPU/CPU divergence is expected
-    // for Q4_K models. What matters is both produce correct answers (tested above).
-    #[allow(clippy::cast_possible_truncation)]
-    let parity_failures = tests.iter().filter(|t| t.test == "gpu_cpu_parity" && t.status == TestStatus::Fail).count() as u32;
-    let pass = (failed - parity_failures) == 0;
+    let pass = failed == 0;
 
     FunctionalResult {
         tier: 3,
@@ -80,6 +77,7 @@ pub fn run(config: &ModelConfig) -> FunctionalResult {
         passed,
         skipped,
         failed,
+        warned,
         tests,
     }
 }
@@ -137,6 +135,7 @@ fn test_inference(model_path: &str, fmt: &str, cpu_only: bool) -> TestEntry {
 }
 
 /// Prove GPU and CPU produce equivalent results via `apr parity --assert --json`.
+/// Reports Warn (not Fail) because `Q4_K` quantization divergence is expected.
 fn test_apr_gpu_cpu_parity(config: &ModelConfig) -> TestEntry {
     let gpu_check = runner::run("nvidia-smi", &["--query-gpu=name", "--format=csv,noheader"]);
     if !gpu_check.success {
@@ -154,7 +153,11 @@ fn test_apr_gpu_cpu_parity(config: &ModelConfig) -> TestEntry {
         &["parity", model_path, "--assert", "--json"],
     );
 
-    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
+    let status = if result.success {
+        TestStatus::Pass
+    } else {
+        TestStatus::Warn
+    };
     eprintln!("  apr GPU/CPU parity: {} ({}ms)", status_label(&status), result.duration_ms);
 
     TestEntry {
@@ -194,18 +197,24 @@ fn test_whisper_transcribe(config: &ModelConfig) -> TestEntry {
     }
 }
 
-fn test_forjar_smoke() -> TestEntry {
-    let result = runner::run("forjar", &["plan", "-f", "/dev/null"]);
+/// Generic infra smoke test: skip if binary not in PATH, otherwise run and check exit code.
+fn test_infra_smoke(binary: &str, test_name: &str, args: &[&str]) -> TestEntry {
+    if types::which(binary).is_none() {
+        eprintln!("  {binary} (smoke): SKIP (not installed)");
+        return skip_entry(binary, test_name, None, "binary not installed");
+    }
+
+    let result = runner::run(binary, args);
     let status = if result.exit_code.is_some() {
         TestStatus::Pass
     } else {
         TestStatus::Fail
     };
-    eprintln!("  forjar plan (smoke): {}", status_label(&status));
+    eprintln!("  {binary} (smoke): {}", status_label(&status));
 
     TestEntry {
-        binary: "forjar".into(),
-        test: "plan_smoke".into(),
+        binary: binary.into(),
+        test: test_name.into(),
         modality: None,
         status,
         duration_ms: result.duration_ms,
@@ -214,6 +223,11 @@ fn test_forjar_smoke() -> TestEntry {
 }
 
 fn test_pmat_smoke() -> TestEntry {
+    if types::which("pmat").is_none() {
+        eprintln!("  pmat (smoke): SKIP (not installed)");
+        return skip_entry("pmat", "query_smoke", None, "binary not installed");
+    }
+
     let result = runner::shell("cd /home/noah/src/cohete && pmat query --literal 'fn main' --limit 5");
     let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
     eprintln!("  pmat query (smoke): {}", status_label(&status));
@@ -229,6 +243,11 @@ fn test_pmat_smoke() -> TestEntry {
 }
 
 fn test_copia_smoke() -> TestEntry {
+    if types::which("copia").is_none() {
+        eprintln!("  copia (smoke): SKIP (not installed)");
+        return skip_entry("copia", "sync_smoke", None, "binary not installed");
+    }
+
     let result = runner::shell(
         "mkdir -p /tmp/cohete-test-src /tmp/cohete-test-dst && \
          echo test > /tmp/cohete-test-src/file.txt && \
@@ -250,22 +269,12 @@ fn test_copia_smoke() -> TestEntry {
     }
 }
 
-fn test_pzsh_smoke() -> TestEntry {
-    let result = runner::run("pzsh", &["status"]);
-    let status = if result.exit_code.is_some() { TestStatus::Pass } else { TestStatus::Fail };
-    eprintln!("  pzsh status (smoke): {}", status_label(&status));
-
-    TestEntry {
-        binary: "pzsh".into(),
-        test: "status_smoke".into(),
-        modality: None,
-        status,
-        duration_ms: result.duration_ms,
-        output: Some(truncate_output(&result.stdout, &result.stderr)),
-    }
-}
-
 fn test_trueno_rag_smoke() -> TestEntry {
+    if types::which("trueno-rag").is_none() {
+        eprintln!("  trueno-rag (smoke): SKIP (not installed)");
+        return skip_entry("trueno-rag", "index_query_smoke", None, "binary not installed");
+    }
+
     let result = runner::shell(
         "echo '{\"text\": \"Rust is a systems language\"}' > /tmp/cohete-rag-test.jsonl && \
          trueno-rag index --sqlite /tmp/cohete-rag-test.db /tmp/cohete-rag-test.jsonl && \
@@ -287,6 +296,11 @@ fn test_trueno_rag_smoke() -> TestEntry {
 }
 
 fn test_batuta_smoke() -> TestEntry {
+    if types::which("batuta").is_none() {
+        eprintln!("  batuta (smoke): SKIP (not installed)");
+        return skip_entry("batuta", "oracle_smoke", None, "binary not installed");
+    }
+
     let config_exists = std::path::Path::new("/home/noah/.batuta-private.toml").exists()
         || std::path::Path::new("/home/noah/.config/batuta/config.toml").exists();
     if !config_exists {
@@ -323,6 +337,7 @@ const fn status_label(s: &TestStatus) -> &'static str {
     match s {
         TestStatus::Pass => "PASS",
         TestStatus::Fail => "FAIL",
+        TestStatus::Warn => "WARN",
         TestStatus::Skip => "SKIP",
     }
 }

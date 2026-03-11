@@ -23,7 +23,7 @@ impl BinaryDef {
 }
 
 /// Look up a binary on PATH via `which`.
-fn which(name: &str) -> Option<String> {
+pub fn which(name: &str) -> Option<String> {
     std::process::Command::new("which")
         .arg(name)
         .output()
@@ -195,6 +195,17 @@ pub struct SmokeResult {
     pub binaries: Vec<BinarySmoke>,
 }
 
+impl SmokeResult {
+    /// Returns true if all *installed* binaries passed smoke tests.
+    /// Missing binaries are ignored (for use with `--allow-missing`).
+    pub fn pass_installed(&self) -> bool {
+        self.binaries
+            .iter()
+            .filter(|b| b.exists && b.executable)
+            .all(|b| b.help_ok && b.version.is_some())
+    }
+}
+
 #[derive(Serialize)]
 pub struct BinarySmoke {
     pub name: String,
@@ -248,6 +259,7 @@ pub struct FunctionalResult {
     pub passed: u32,
     pub skipped: u32,
     pub failed: u32,
+    pub warned: u32,
     pub tests: Vec<TestEntry>,
 }
 
@@ -266,6 +278,7 @@ pub struct TestEntry {
 pub enum TestStatus {
     Pass,
     Fail,
+    Warn,
     Skip,
 }
 
