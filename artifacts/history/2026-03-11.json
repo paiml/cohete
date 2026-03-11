@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "date": "2026-03-11",
+  "timestamp": "2026-03-11T06:23:04.244825375Z",
+  "cohete_version": "0.1.0",
+  "pass": false,
+  "duration_s": 60,
+  "tiers": {
+    "smoke": {
+      "pass": true,
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "hardware": {
+      "pass": false,
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    "functional": {
+      "pass": false,
+      "total": 9,
+      "passed": 3,
+      "failed": 4,
+      "skipped": 2
+    },
+    "integration": {
+      "pass": false,
+      "total": 4,
+      "passed": 0,
+      "failed": 2,
+      "skipped": 2
+    },
+    "performance": {
+      "pass": true,
+      "regressions": 0
+    }
+  },
+  "binaries": [
+    {
+      "name": "apr",
+      "version": "apr 0.4.10 (6d34b823)",
+      "installed": true
+    },
+    {
+      "name": "whisper-apr",
+      "version": "whisper-apr 0.2.4",
+      "installed": true
+    },
+    {
+      "name": "trueno-rag",
+      "version": "trueno-rag 0.1.5",
+      "installed": true
+    },
+    {
+      "name": "forjar",
+      "version": "forjar 1.1.1",
+      "installed": true
+    },
+    {
+      "name": "pmat",
+      "version": "pmat 3.7.0",
+      "installed": true
+    },
+    {
+      "name": "copia",
+      "version": "copia 0.1.3",
+      "installed": true
+    },
+    {
+      "name": "pzsh",
+      "version": "pzsh 0.3.5",
+      "installed": true
+    },
+    {
+      "name": "batuta",
+      "version": "batuta 0.7.2",
+      "installed": true
+    }
+  ],
+  "version_changes": [],
+  "hardware": {
+    "gpu": "Orin (nvgpu)",
+    "cuda": "12.6",
+    "neon": false,
+    "power_mode": "15W",
+    "jetpack": "# R36 (release), REVISION: 5.0, GCID: 43688277, BOARD: generic, EABI: aarch64, DATE: Fri Jan 16 03:50:45 UTC 2026"
+  },
+  "metrics": {
+    "inference_tok_s": null,
+    "whisper_rtf": null,
+    "rag_query_ms": null,
+    "memory_available_mb": 6574
+  }
+}
