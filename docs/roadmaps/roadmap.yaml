@@ -272,3 +272,20 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: PMAT-017
+  github_issue: null
+  item_type: task
+  title: 'Dogfood UAT: deepen falsification, add book chapter, harden edge cases'
+  status: completed
+  priority: medium
+  assigned_to: null
+  created: 2026-03-11T15:14:46Z
+  updated: 2026-03-11T15:53:32.138001867+00:00
+  spec: null
+  acceptance_criteria:
+  - 'Continue dogfooding UAT implementation against docs/specifications/components/uat-apr-model.md. Deepen falsification: run edge cases, verify generate-status.py UAT rendering, add dogfooding workflow chapter to book, harden remaining fragile checks.'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
