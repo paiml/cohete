@@ -244,11 +244,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: 'feat: APR model UAT sub-spec and forjar-based acceptance verification'
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2026-03-11T12:58:27Z
-  updated: 2026-03-11T12:58:31.729627714+00:00
+  updated: 2026-03-11T13:35:54.075498249+00:00
   spec: null
   acceptance_criteria: []
   phases: []
