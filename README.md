@@ -140,6 +140,7 @@ the updated README alongside the history snapshot.
 - [Test tiers](docs/specifications/components/test-tiers.md)
 - [Binary matrix](docs/specifications/components/binary-matrix.md)
 - [Artifact schemas](docs/specifications/components/artifacts.md)
+- [UAT: APR model acceptance](docs/specifications/components/uat-apr-model.md)
 
 ## License
 

@@ -1,0 +1,46 @@
+{
+  "checkpoint_id": "08c76ef5-c215-4976-b4a0-c27c638a1cf4",
+  "work_item_id": "PMAT-015",
+  "timestamp": "2026-03-11T13:34:31.843499401Z",
+  "git_sha": "7204e7c92e3ba868922712260e7a3baae94d37e1",
+  "iteration": 1,
+  "invariant_results": [
+    {
+      "clause_id": "invariant.compiles",
+      "passed": true,
+      "explanation": "Compiles successfully"
+    },
+    {
+      "clause_id": "invariant.file_size",
+      "passed": true,
+      "explanation": "All changed files within 500 line limit"
+    },
+    {
+      "clause_id": "invariant.lint",
+      "passed": true,
+      "explanation": "Lint clean"
+    },
+    {
+      "clause_id": "invariant.complexity",
+      "passed": true,
+      "explanation": "No function exceeds complexity 20: deferred to completion"
+    },
+    {
+      "clause_id": "invariant.satd",
+      "passed": true,
+      "explanation": "No new SATD markers: deferred to completion"
+    },
+    {
+      "clause_id": "invariant.dead_code",
+      "passed": true,
+      "explanation": "No new dead code introduced: deferred to completion"
+    },
+    {
+      "clause_id": "invariant.fix_chain",
+      "passed": true,
+      "explanation": "Fix-after-fix chains within limit: deferred to completion"
+    }
+  ],
+  "all_invariants_hold": true,
+  "drift_bound": 0.008680555555555556
+}

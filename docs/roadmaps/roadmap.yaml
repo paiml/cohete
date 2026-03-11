@@ -240,3 +240,19 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: PMAT-015
+  github_issue: null
+  item_type: task
+  title: 'feat: APR model UAT sub-spec and forjar-based acceptance verification'
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-11T12:58:27Z
+  updated: 2026-03-11T12:58:31.729627714+00:00
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null

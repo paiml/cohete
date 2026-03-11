@@ -9,6 +9,7 @@ use crate::runner;
 use crate::types::{
     CorrectnessStatus, IntegrationModalities, IntegrationResult, ModalityStatus, ModelConfig,
 };
+use crate::uat;
 
 const SERVE_PORT: u16 = 8090; // Avoid common ports
 const SERVE_TIMEOUT_S: u64 = 30;
@@ -19,10 +20,10 @@ pub fn run(config: &ModelConfig) -> IntegrationResult {
     let mut failed: u32 = 0;
     let mut skipped: u32 = 0;
 
-    // M2 + M3 + M4: Chat server, correctness, and load test
-    let (m2, m3, m4) = if config.has_model() {
+    // M2 + M3 + UAT + M4: Chat server, correctness, UAT, then load test
+    let (m2, m3, m4, uat_result) = if config.has_model() {
         let model_path = config.model_path.as_deref().unwrap_or("");
-        let (server, correct, load) = run_server_tests(model_path);
+        let (server, correct, uat_r, load) = run_server_tests(model_path, config);
         total += 3;
         count_status(&server, &mut passed, &mut failed, &mut skipped);
         if let Some(ref c) = correct {
@@ -31,12 +32,18 @@ pub fn run(config: &ModelConfig) -> IntegrationResult {
             skipped += 1;
         }
         count_modality_status(&load, &mut passed, &mut failed, &mut skipped);
-        (Some(server), correct, Some(load))
+        // UAT counts
+        if let Some(ref u) = uat_r {
+            total += u.total;
+            passed += u.passed;
+            failed += u.failed;
+        }
+        (Some(server), correct, Some(load), uat_r)
     } else {
         eprintln!("  M2/M3/M4: SKIP (no model found — set --model, COHETE_MODEL, or `apr pull`)");
         total += 3;
         skipped += 3;
-        (None, None, None)
+        (None, None, None, None)
     };
 
     // M6: RAG pipeline
@@ -69,6 +76,7 @@ pub fn run(config: &ModelConfig) -> IntegrationResult {
             m4_load_test: m4,
             m6_rag_pipeline: m6,
         },
+        uat: uat_result,
     }
 }
 
@@ -80,8 +88,11 @@ fn count_modality_status(ms: &ModalityStatus, passed: &mut u32, failed: &mut u32
     if ms.pass { *passed += 1; } else { *failed += 1; }
 }
 
-/// Start apr serve run, run correctness + load tests, then stop server.
-fn run_server_tests(model_path: &str) -> (ModalityStatus, Option<CorrectnessStatus>, ModalityStatus) {
+/// Start apr serve run, run correctness + UAT + load tests, then stop server.
+fn run_server_tests(
+    model_path: &str,
+    config: &ModelConfig,
+) -> (ModalityStatus, Option<CorrectnessStatus>, Option<uat::UatResult>, ModalityStatus) {
     eprintln!("  M2: starting apr serve run on port {SERVE_PORT}...");
     let port_str = SERVE_PORT.to_string();
     let Some(mut child) = runner::spawn(
@@ -91,6 +102,7 @@ fn run_server_tests(model_path: &str) -> (ModalityStatus, Option<CorrectnessStat
         eprintln!("  M2: failed to spawn apr serve");
         return (
             ModalityStatus { pass: false, detail: "failed to spawn apr serve".into() },
+            None,
             None,
             ModalityStatus { pass: false, detail: "skipped (no server)".into() },
         );
@@ -116,6 +128,7 @@ fn run_server_tests(model_path: &str) -> (ModalityStatus, Option<CorrectnessStat
         return (
             ModalityStatus { pass: false, detail: "server did not become healthy".into() },
             None,
+            None,
             ModalityStatus { pass: false, detail: "skipped (no server)".into() },
         );
     };
@@ -127,6 +140,9 @@ fn run_server_tests(model_path: &str) -> (ModalityStatus, Option<CorrectnessStat
         m3.passed, m3.total
     );
 
+    // UAT: Real-world problem solving (U1-U4) — server is alive
+    let uat_r = uat::run(config);
+
     // M4: Simple load test (2 concurrent requests)
     let m4 = run_load_test();
     eprintln!("  M4: load test {}", if m4.pass { "PASS" } else { "FAIL" });
@@ -135,7 +151,7 @@ fn run_server_tests(model_path: &str) -> (ModalityStatus, Option<CorrectnessStat
     let _ = child.wait();
     cleanup_server();
 
-    (m2, Some(m3), m4)
+    (m2, Some(m3), Some(uat_r), m4)
 }
 
 fn run_correctness_tests() -> CorrectnessStatus {

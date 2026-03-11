@@ -10,6 +10,7 @@
 - [Test Tiers](./spec/test-tiers.md)
 - [Binary Matrix](./spec/binary-matrix.md)
 - [Artifact Schemas](./spec/artifacts.md)
+- [UAT: APR Model Acceptance](./spec/uat-apr-model.md)
 
 ---
 

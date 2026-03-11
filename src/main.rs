@@ -10,6 +10,7 @@ mod tier3_functional;
 mod tier4_integration;
 mod tier5_performance;
 mod types;
+mod uat;
 
 use clap::Parser;
 use std::path::{Path, PathBuf};

@@ -1,0 +1,1 @@
+../../../docs/specifications/components/uat-apr-model.md

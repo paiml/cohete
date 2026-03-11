@@ -20,6 +20,7 @@ Sub-specifications (in `components/`):
 - [test-tiers.md](components/test-tiers.md) — Detailed 5-tier test framework
 - [binary-matrix.md](components/binary-matrix.md) — Binary inventory, features, versions
 - [artifacts.md](components/artifacts.md) — JSON schema, storage, regression detection
+- [uat-apr-model.md](components/uat-apr-model.md) — APR model UAT: chat, serve, kernel provability, task chaining
 
 ---
 

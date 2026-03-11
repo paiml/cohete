@@ -3,6 +3,8 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
+use crate::uat::UatResult;
+
 /// Binary definition — what cohete expects to find installed.
 pub struct BinaryDef {
     pub name: &'static str,
@@ -293,6 +295,8 @@ pub struct IntegrationResult {
     pub failed: u32,
     pub skipped: u32,
     pub modalities: IntegrationModalities,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uat: Option<UatResult>,
 }
 
 #[derive(Serialize)]
@@ -359,8 +363,8 @@ pub struct Summary {
 pub struct TiersSummary {
     pub smoke: TierStatus,
     pub hardware: Option<TierStatus>,
-    pub functional: Option<TierStatusCounts>,
-    pub integration: Option<TierStatusCounts>,
+    pub functional: Option<TierStatus>,
+    pub integration: Option<TierStatus>,
     pub performance: Option<TierStatusPerf>,
 }
 
@@ -373,13 +377,10 @@ pub struct TierStatus {
     pub skipped: u32,
 }
 
-#[derive(Serialize)]
-pub struct TierStatusCounts {
-    pub pass: bool,
-    pub total: u32,
-    pub passed: u32,
-    pub failed: u32,
-    pub skipped: u32,
+impl TierStatus {
+    pub const fn from_counts(pass: bool, total: u32, passed: u32, failed: u32, skipped: u32) -> Self {
+        Self { pass, total, passed, failed, skipped }
+    }
 }
 
 #[derive(Serialize)]
@@ -426,30 +427,22 @@ impl Summary {
         let now = Utc::now();
         let duration_s = (now - started).num_seconds().unsigned_abs();
 
-        let binaries: Vec<BinarySummary> = smoke
-            .binaries
-            .iter()
-            .map(|b| BinarySummary {
-                name: b.name.clone(),
-                version: b.version.clone(),
-                installed: b.exists && b.executable,
-            })
+        let binaries: Vec<BinarySummary> = smoke.binaries.iter()
+            .map(|b| BinarySummary { name: b.name.clone(), version: b.version.clone(), installed: b.exists && b.executable })
             .collect();
 
         let version_changes = detect_version_changes(&binaries, history_dir);
-
         let hw_summary = hardware.map(|h| HardwareSummary {
             gpu: h.gpu.as_ref().map(|g| g.model.clone()),
             cuda: h.gpu.as_ref().and_then(|g| g.cuda_version.clone()),
-            neon: h.cpu.neon,
-            power_mode: h.power_mode.clone(),
-            jetpack: h.jetpack.clone(),
+            neon: h.cpu.neon, power_mode: h.power_mode.clone(), jetpack: h.jetpack.clone(),
         });
-
         #[allow(clippy::cast_possible_truncation)]
         let smoke_total = smoke.binaries.len() as u32;
         #[allow(clippy::cast_possible_truncation)]
-        let smoke_passed = smoke.binaries.iter().filter(|b| b.exists && b.executable && b.help_ok && b.version.is_some()).count() as u32;
+        let smoke_passed = smoke.binaries.iter()
+            .filter(|b| b.exists && b.executable && b.help_ok && b.version.is_some())
+            .count() as u32;
 
         Self {
             schema_version: 1,
@@ -459,34 +452,10 @@ impl Summary {
             pass,
             duration_s,
             tiers: TiersSummary {
-                smoke: TierStatus {
-                    pass: smoke.pass,
-                    total: smoke_total,
-                    passed: smoke_passed,
-                    failed: smoke_total - smoke_passed,
-                    skipped: 0,
-                },
-                hardware: hardware.map(|h| TierStatus {
-                    pass: h.pass,
-                    total: 1,
-                    passed: u32::from(h.pass),
-                    failed: u32::from(!h.pass),
-                    skipped: 0,
-                }),
-                functional: functional.map(|f| TierStatusCounts {
-                    pass: f.pass,
-                    total: f.total,
-                    passed: f.passed,
-                    failed: f.failed,
-                    skipped: f.skipped,
-                }),
-                integration: integration.map(|i| TierStatusCounts {
-                    pass: i.pass,
-                    total: i.total,
-                    passed: i.passed,
-                    failed: i.failed,
-                    skipped: i.skipped,
-                }),
+                smoke: TierStatus::from_counts(smoke.pass, smoke_total, smoke_passed, smoke_total - smoke_passed, 0),
+                hardware: hardware.map(|h| TierStatus::from_counts(h.pass, 1, u32::from(h.pass), u32::from(!h.pass), 0)),
+                functional: functional.map(|f| TierStatus::from_counts(f.pass, f.total, f.passed, f.failed, f.skipped)),
+                integration: integration.map(|i| TierStatus::from_counts(i.pass, i.total, i.passed, i.failed, i.skipped)),
                 performance: performance.map(|p| TierStatusPerf {
                     pass: p.pass,
                     regressions: p.regressions,
@@ -495,60 +464,26 @@ impl Summary {
             binaries,
             version_changes,
             hardware: hw_summary,
-            metrics: performance.map(|p| PerformanceMetrics {
-                inference_tok_s: p.metrics.inference_tok_s,
-                whisper_rtf: p.metrics.whisper_rtf,
-                rag_query_ms: p.metrics.rag_query_ms,
-                memory_available_mb: p.metrics.memory_available_mb,
-            }),
+            metrics: performance.map(|p| PerformanceMetrics { inference_tok_s: p.metrics.inference_tok_s, whisper_rtf: p.metrics.whisper_rtf, rag_query_ms: p.metrics.rag_query_ms, memory_available_mb: p.metrics.memory_available_mb }),
         }
     }
 }
 
 /// Compare current binary versions against yesterday's history file.
-fn detect_version_changes(
-    binaries: &[BinarySummary],
-    history_dir: Option<&std::path::Path>,
-) -> Vec<VersionChange> {
-    let Some(dir) = history_dir else {
-        return Vec::new();
-    };
-
-    // Find yesterday's file
-    let yesterday = (chrono::Utc::now() - chrono::Duration::days(1))
-        .format("%Y-%m-%d")
-        .to_string();
-    let yesterday_file = dir.join(format!("{yesterday}.json"));
-
-    let Ok(data) = std::fs::read_to_string(&yesterday_file) else {
-        return Vec::new();
-    };
-
-    let Ok(prev) = serde_json::from_str::<serde_json::Value>(&data) else {
-        return Vec::new();
-    };
-
-    let Some(prev_bins) = prev.get("binaries").and_then(|b| b.as_array()) else {
-        return Vec::new();
-    };
-
+fn detect_version_changes(binaries: &[BinarySummary], history_dir: Option<&std::path::Path>) -> Vec<VersionChange> {
+    let Some(dir) = history_dir else { return Vec::new() };
+    let yesterday = (chrono::Utc::now() - chrono::Duration::days(1)).format("%Y-%m-%d").to_string();
+    let Ok(data) = std::fs::read_to_string(dir.join(format!("{yesterday}.json"))) else { return Vec::new() };
+    let Ok(prev) = serde_json::from_str::<serde_json::Value>(&data) else { return Vec::new() };
+    let Some(prev_bins) = prev.get("binaries").and_then(|b| b.as_array()) else { return Vec::new() };
     let mut changes = Vec::new();
     for bin in binaries {
-        let Some(ref current_ver) = bin.version else { continue };
-        let prev_ver = prev_bins
-            .iter()
+        let Some(ref cur) = bin.version else { continue };
+        let prev_ver = prev_bins.iter()
             .find(|b| b.get("name").and_then(|n| n.as_str()) == Some(&bin.name))
-            .and_then(|b| b.get("version"))
-            .and_then(|v| v.as_str());
-
-        if let Some(prev) = prev_ver {
-            if prev != current_ver {
-                changes.push(VersionChange {
-                    binary: bin.name.clone(),
-                    from: prev.to_string(),
-                    to: current_ver.clone(),
-                });
-            }
+            .and_then(|b| b.get("version")).and_then(|v| v.as_str());
+        if let Some(p) = prev_ver {
+            if p != cur { changes.push(VersionChange { binary: bin.name.clone(), from: p.to_string(), to: cur.clone() }); }
         }
     }
     changes

@@ -120,6 +120,31 @@ def generate_markdown(summary, functional, integration):
                 f"### Correctness (M3): {m3['passed']}/{m3['total']} passed"
             )
 
+    # UAT: Real-World Problem Solving
+    if integration:
+        uat = integration.get("uat")
+        if uat:
+            lines.append("")
+            lines.append("### UAT: Real-World Problem Solving")
+            lines.append("")
+            lines.append("| Suite | Passed | Total | Status |")
+            lines.append("|-------|--------|-------|--------|")
+            uat_suites = [
+                ("U1 Chat Solving", "U1_chat_problem_solving"),
+                ("U2 API Validation", "U2_serve_api"),
+                ("U3 Kernel Provability", "U3_kernel_provability"),
+                ("U4 Task Chaining", "U4_task_chaining"),
+            ]
+            for label, key in uat_suites:
+                suite = uat.get(key)
+                if suite:
+                    sp = suite.get("passed", 0)
+                    st = suite.get("total", 0)
+                    icon = "\u2705" if suite.get("pass") else "\u274c"
+                    lines.append(f"| {label} | {sp} | {st} | {icon} |")
+                else:
+                    lines.append(f"| {label} | \u2014 | \u2014 | \u2014 |")
+
     # Performance
     lines.append("")
     lines.append("### Performance")

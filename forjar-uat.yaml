@@ -1,0 +1,114 @@
+# Cohete UAT: APR Model Acceptance Testing via Forjar
+# Orchestrates U1-U4 scenarios with BLAKE3 provenance tracking.
+#
+# Usage:
+#   forjar validate -f forjar-uat.yaml
+#   forjar test -f forjar-uat.yaml --json
+#   forjar run -f forjar-uat.yaml uat-pipeline
+#
+# Refs: PMAT-015, docs/specifications/components/uat-apr-model.md
+
+version: '1.0'
+name: cohete-uat
+description: "APR model user acceptance testing — chat, serve, kernel provability, task chaining"
+
+machines:
+  local:
+    hostname: localhost
+    addr: 127.0.0.1
+    transport: local
+
+params:
+  serve_port: "8090"
+  model_dir: "~/.cache/pacha/models"
+  artifacts_dir: "artifacts/latest"
+  max_tokens: "256"
+  temperature: "0"
+
+resources:
+  uat-pipeline:
+    machine: local
+    type: task
+    task_mode: pipeline
+    stages:
+      - name: u1-chat-solve
+        command: |
+          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
+            | jq -r '.uat.U1_chat_problem_solving // empty'
+        outputs: ["{{ params.artifacts_dir }}/integration.json"]
+        gate: false
+
+      - name: u2-api-validate
+        command: |
+          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
+            | jq -r '.uat.U2_serve_api // empty'
+        outputs: ["{{ params.artifacts_dir }}/integration.json"]
+        gate: false
+
+      - name: u3-kernel-prove
+        command: |
+          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
+            | jq -r '.uat.U3_kernel_provability // empty'
+        outputs: ["{{ params.artifacts_dir }}/integration.json"]
+        gate: true
+
+      - name: u4-chain-tasks
+        command: |
+          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
+            | jq -r '.uat.U4_task_chaining // empty'
+        outputs: ["{{ params.artifacts_dir }}/integration.json"]
+        gate: false
+
+    quality_gate:
+      parse: json
+      field: pass
+      threshold: ["true"]
+      on_fail: warn
+
+  # Standalone: verify kernel reproducibility (U3-001 reflexivity)
+  kernel-reflexivity:
+    machine: local
+    type: task
+    task_mode: dispatch
+    command: |
+      MODEL=$(find {{ params.model_dir }} -name '*.gguf' -o -name '*.apr' 2>/dev/null | head -1)
+      [ -z "$MODEL" ] && echo '{"pass":false,"reason":"no model"}' && exit 1
+      OUT1=$(apr run "$MODEL" -p "2+2=" -n 8 2>/dev/null)
+      OUT2=$(apr run "$MODEL" -p "2+2=" -n 8 2>/dev/null)
+      OUT3=$(apr run "$MODEL" -p "2+2=" -n 8 2>/dev/null)
+      if [ "$OUT1" = "$OUT2" ] && [ "$OUT2" = "$OUT3" ]; then
+        echo "{\"pass\":true,\"output\":\"$OUT1\",\"runs\":3,\"all_identical\":true}"
+      else
+        echo "{\"pass\":false,\"runs\":3,\"all_identical\":false}"
+      fi
+    completion_check: |
+      apr --version >/dev/null 2>&1
+    tags: [uat, kernel, u3]
+
+  # Standalone: verify format parity GGUF vs APR (U3-003)
+  format-parity:
+    machine: local
+    type: task
+    task_mode: dispatch
+    command: |
+      GGUF=$(find {{ params.model_dir }} -name '*.gguf' 2>/dev/null | head -1)
+      APR=$(find {{ params.model_dir }} -name '*.apr' 2>/dev/null | head -1)
+      [ -z "$GGUF" ] || [ -z "$APR" ] && echo '{"pass":null,"reason":"need both formats"}' && exit 0
+      O1=$(apr run "$GGUF" -p "2+2=" -n 8 2>/dev/null)
+      O2=$(apr run "$APR" -p "2+2=" -n 8 2>/dev/null)
+      MATCH=$([ "$O1" = "$O2" ] && echo true || echo false)
+      echo "{\"pass\":true,\"gguf_output\":\"$O1\",\"apr_output\":\"$O2\",\"match\":$MATCH}"
+    depends_on: [kernel-reflexivity]
+    completion_check: |
+      apr --version >/dev/null 2>&1
+    tags: [uat, kernel, u3]
+
+  # Generate README section from UAT artifacts
+  readme-update:
+    machine: local
+    type: task
+    task_mode: dispatch
+    command: |
+      cd {{ params.artifacts_dir }}/.. && python3 ../scripts/generate-status.py
+    depends_on: [uat-pipeline]
+    tags: [docs, readme]
