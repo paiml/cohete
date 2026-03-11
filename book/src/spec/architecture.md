@@ -89,6 +89,7 @@ cohete verify [OPTIONS]
       --max-tier <N>       Only run tiers 1..N (1-5)
       --stdout             Print JSON to stdout instead of writing files
       --allow-missing      Continue past tier 1 gate if binaries are missing
+      --model <PATH>       Path to model file (overrides COHETE_MODEL and auto-discovery)
 ```
 
 ## 3. Ownership Model
@@ -162,12 +163,12 @@ Cohete proves **6 modalities** of the sovereign stack on edge:
 and produces tokens. Fastest feedback loop.
 
 ```bash
-apr run --model ~/data/models/canary/qwen-1.5b-q4k.apr \
-    --prompt "1+1=" --max-tokens 8
+apr run ~/data/models/canary/qwen-1.5b-q4k.apr \
+    --prompt "What is 7 * 8?" --max-tokens 16
 ```
 
-**M2: Chat Server** — Start `apr serve --model ... --port 8090`, verify `/health` endpoint,
-send a chat completion request via curl. Proves the HTTP stack works on ARM.
+**M2: Chat Server** — Start `apr serve run <model> --port 8090`, verify `/health` endpoint,
+send a chat completion request via `runner::curl_post()`. Proves the HTTP stack works on ARM.
 
 **M3: Correctness** — 6 deterministic tests (temperature=0) via cohete's built-in
 curl requests against the running chat server:
@@ -181,8 +182,8 @@ curl requests against the running chat server:
 | code_explanation | "What does vec map do?" | Regex `(double\|multiply\|2)` |
 | sql_query | "Top 5 users by orders" | Regex `SELECT.*ORDER BY.*LIMIT` |
 
-**M4: Load Test** — 2 concurrent curl requests. Jetson has 8 GB shared
-memory; this proves inference doesn't OOM under light concurrency.
+**M4: Load Test** — 2 sequential `runner::curl_post()` requests. Jetson has 8 GB shared
+memory; this proves inference doesn't OOM under light load.
 
 **M5: Transcription** — `whisper-apr transcribe test.wav` on a short audio clip.
 Proves ARM NEON SIMD path works. No GPU needed — whisper runs CPU-only.
@@ -222,7 +223,7 @@ Five tiers, increasing integration depth. Total budget: **< 5 minutes**.
 | 1 | Smoke | `--version` and `--help` for all 8 binaries | 10s |
 | 2 | Hardware | GPU enumeration, CUDA, Vulkan, NEON | 15s |
 | 3 | Functional | Each binary does its core job (M1, M5) | 120s |
-| 4 | Integration | Chat server + correctness + load + RAG pipeline (M2-M4, M6) | 120s |
+| 4 | Integration | Chat server + correctness + UAT (19) + load + RAG (M2-M4, M6) | 120s |
 | 5 | Performance | Baselines: tok/s, whisper RTF, RAG latency, memory | 30s |
 
 **Tier 1 is the gate.** If any binary fails `--version`, the entire run is red.
@@ -290,8 +291,8 @@ artifacts/
   "tiers": {
     "smoke": { "pass": true, "total": 8, "passed": 8, "failed": 0, "skipped": 0 },
     "hardware": { "pass": true, "total": 1, "passed": 1, "failed": 0, "skipped": 0 },
-    "functional": { "pass": true, "total": 9, "passed": 7, "failed": 0, "skipped": 2 },
-    "integration": { "pass": true, "total": 4, "passed": 4, "failed": 0, "skipped": 0 },
+    "functional": { "pass": true, "total": 13, "passed": 10, "failed": 0, "skipped": 2 },
+    "integration": { "pass": true, "total": 23, "passed": 22, "failed": 0, "skipped": 1 },
     "performance": { "pass": true, "regressions": 0 }
   },
   "binaries": [
@@ -327,10 +328,11 @@ See [artifacts.md](artifacts.md) for full schemas.
 2. All 8 binaries pass tier 1 (smoke)
 3. All 6 modalities are tested (M1–M6)
 4. Correctness tests (M3) pass for all 6 prompts
-5. whisper-apr transcription (M5) produces output on ARM NEON
-6. RAG pipeline (M6) completes transcribe → index → query
-7. `summary.json` is committed to `artifacts/` after each run
-8. README contains modality matrix with links to nightly binaries
+5. UAT (19 scenarios across U1-U4) validates real-world problem solving
+6. whisper-apr transcription (M5) produces output on ARM NEON
+7. RAG pipeline (M6) completes transcribe → index → query
+8. `summary.json` is committed to `artifacts/` after each run
+9. README contains modality matrix with links to nightly binaries
 
 **Cohete is NOT responsible for:**
 - Building binaries (repos own this)

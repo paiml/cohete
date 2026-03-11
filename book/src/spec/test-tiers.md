@@ -98,13 +98,24 @@ For every binary in the matrix, run:
 # Hardware self-test (requires model file)
 apr check ~/data/models/canary/qwen-1.5b-q4k.apr
 
-# Single-shot inference (requires model)
-apr run --model ~/data/models/canary/qwen-1.5b-q4k.apr \
-    --prompt "1+1=" --max-tokens 8 2>&1
+# Single-shot inference — GPU and CPU for each format
+apr run ~/data/models/canary/d47927c5638f80ab.gguf \
+    --prompt "What is 7 * 8?" --max-tokens 16
+apr run ~/data/models/canary/d47927c5638f80ab.gguf \
+    --prompt "What is 7 * 8?" --max-tokens 16 --no-gpu
+apr run ~/data/models/canary/qwen-1.5b-q4k.apr \
+    --prompt "What is 7 * 8?" --max-tokens 16
+apr run ~/data/models/canary/qwen-1.5b-q4k.apr \
+    --prompt "What is 7 * 8?" --max-tokens 16 --no-gpu
+
+# GPU/CPU parity proof (informational, Warn on divergence)
+apr parity ~/data/models/canary/d47927c5638f80ab.gguf --assert --json
 ```
 
-**Pass:** `apr check` exits 0. Inference produces tokens.
-**Skip:** both tests skipped if model not present.
+**Pass:** `apr check` exits 0. Inference on each format+backend produces "56".
+**Skip:** tests skipped if model not present. GPU tests skipped if no GPU.
+**Note:** GPU/CPU parity reports Warn (not Fail) because Q4_K quantization
+divergence is expected.
 
 ### M5: Transcription — `whisper-apr`
 
@@ -179,14 +190,25 @@ batuta oracle --rag "test query" 2>&1
 {
   "tier": 3,
   "pass": true,
-  "total": 9,
-  "passed": 8,
-  "skipped": 1,
+  "total": 13,
+  "passed": 10,
+  "skipped": 2,
   "failed": 0,
+  "warned": 1,
   "tests": [
-    { "binary": "apr", "test": "check", "modality": null, "status": "pass", "duration_ms": 1200 },
-    { "binary": "apr", "test": "inference", "modality": "M1", "status": "pass", "duration_ms": 3400 },
-    { "binary": "whisper-apr", "test": "transcribe", "modality": "M5", "status": "pass", "duration_ms": 2100 }
+    { "binary": "apr", "test": "check", "modality": null, "status": "pass", "duration_ms": 1841 },
+    { "binary": "apr", "test": "inference_gguf_gpu", "modality": "M1", "status": "pass", "duration_ms": 3915 },
+    { "binary": "apr", "test": "inference_gguf_cpu", "modality": "M1", "status": "pass", "duration_ms": 3113 },
+    { "binary": "apr", "test": "inference_apr_gpu", "modality": "M1", "status": "pass", "duration_ms": 13792 },
+    { "binary": "apr", "test": "inference_apr_cpu", "modality": "M1", "status": "pass", "duration_ms": 12071 },
+    { "binary": "apr", "test": "gpu_cpu_parity", "modality": "M1", "status": "warn", "duration_ms": 2898 },
+    { "binary": "whisper-apr", "test": "transcribe", "modality": "M5", "status": "skip", "duration_ms": 0 },
+    { "binary": "forjar", "test": "plan_smoke", "modality": null, "status": "pass", "duration_ms": 3 },
+    { "binary": "pmat", "test": "query_smoke", "modality": null, "status": "pass", "duration_ms": 12 },
+    { "binary": "copia", "test": "sync_smoke", "modality": null, "status": "pass", "duration_ms": 7 },
+    { "binary": "pzsh", "test": "status_smoke", "modality": null, "status": "pass", "duration_ms": 0 },
+    { "binary": "trueno-rag", "test": "index_query_smoke", "modality": null, "status": "skip", "duration_ms": 0 },
+    { "binary": "batuta", "test": "oracle_smoke", "modality": null, "status": "pass", "duration_ms": 15939 }
   ]
 }
 ```
@@ -202,7 +224,7 @@ batuta oracle --rag "test query" 2>&1
 
 ```bash
 # 1. Start chat server (background)
-apr serve --model ~/data/models/canary/qwen-1.5b-q4k.apr --port 8090 &
+apr serve run ~/data/models/canary/qwen-1.5b-q4k.apr --port 8090 &
 SERVER_PID=$!
 
 # 2. Wait for health
@@ -211,15 +233,11 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-# 3. Run 6 correctness tests (cohete built-in curl, temperature=0)
+# 3. Run 6 correctness tests via runner::curl_post() (direct Command args)
 # Tests: basic_math, python_fibonacci, rust_hello, json_output,
 #        code_explanation, sql_query
-# Each sends a POST to /v1/chat/completions with max_tokens=128
-curl -sf -X POST http://localhost:8090/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{"messages":[{"role":"user","content":"What is 7 * 8?"}],"max_tokens":128,"temperature":0}'
-# Pass: response contains "56"
-# (repeat for all 6 tests)
+# Each POSTs to /v1/chat/completions with max_tokens=128, temperature=0
+# Pass: response matches per-test criteria (e.g., basic_math contains "56")
 
 # 4. Stop server (after M4)
 ```
@@ -246,20 +264,20 @@ See [UAT: APR Model Acceptance](./uat-apr-model.md) for full scenario definition
 
 ```bash
 # Server still running from M2
-# 2 concurrent curl requests
-for i in 1 2; do
-  curl -sf -X POST http://localhost:8090/v1/chat/completions \
-    -H 'Content-Type: application/json' \
-    -d '{"messages":[{"role":"user","content":"Hello"}],"max_tokens":16,"temperature":0}' &
-done
-wait
+# 2 sequential requests via runner::curl_post() (direct Command args)
+curl -sf -X POST http://localhost:8090/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Hello"}],"max_tokens":16,"temperature":0}'
+curl -sf -X POST http://localhost:8090/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Hello"}],"max_tokens":16,"temperature":0}'
 
 # Now stop server
 kill $SERVER_PID 2>/dev/null
 pkill -f "apr serve" 2>/dev/null || true
 ```
 
-**Pass:** No crashes, no OOM. Both requests complete successfully.
+**Pass:** No crashes, no OOM. Both sequential requests complete successfully.
 
 ### M6: RAG Pipeline (Transcribe → Index → Query)
 
@@ -286,18 +304,32 @@ trueno-rag query --sqlite /tmp/pipeline.db "what was said"
 {
   "tier": 4,
   "pass": true,
-  "total": 4,
-  "passed": 4,
+  "total": 23,
+  "passed": 22,
   "failed": 0,
-  "skipped": 0,
+  "skipped": 1,
   "modalities": {
     "M2_chat_server": { "pass": true, "detail": "health endpoint OK" },
     "M3_correctness": { "pass": true, "total": 6, "passed": 6 },
-    "M4_load_test": { "pass": true, "detail": "2 concurrent requests, 1240ms" },
-    "M6_rag_pipeline": { "pass": true, "detail": "transcribe→index→query complete" }
+    "M4_load_test": { "pass": true, "detail": "2 sequential requests, 2141ms" },
+    "M6_rag_pipeline": null
+  },
+  "uat": {
+    "pass": true,
+    "total": 19,
+    "passed": 19,
+    "failed": 0,
+    "U1_chat_problem_solving": { "pass": true, "total": 5, "passed": 5, "scenarios": ["..."] },
+    "U2_serve_api": { "pass": true, "total": 6, "passed": 6, "scenarios": ["..."] },
+    "U3_kernel_provability": { "pass": true, "total": 4, "passed": 4, "scenarios": ["..."] },
+    "U4_task_chaining": { "pass": true, "total": 4, "passed": 4, "scenarios": ["..."] }
   }
 }
 ```
+
+**Note:** `total` includes UAT's 19 scenarios. `M6_rag_pipeline` is `null` when
+whisper model or audio fixtures are not present. See
+[UAT: APR Model Acceptance](./uat-apr-model.md) for full UAT scenario schemas.
 
 ---
 

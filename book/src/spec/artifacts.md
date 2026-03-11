@@ -46,8 +46,8 @@ permanent, auditable record.
   "tiers": {
     "smoke":       { "pass": true, "total": 8, "passed": 8, "failed": 0, "skipped": 0 },
     "hardware":    { "pass": true, "total": 1, "passed": 1, "failed": 0, "skipped": 0 },
-    "functional":  { "pass": true, "total": 9, "passed": 7, "failed": 0, "skipped": 2 },
-    "integration": { "pass": true, "total": 4, "passed": 4, "failed": 0, "skipped": 0 },
+    "functional":  { "pass": true, "total": 13, "passed": 10, "failed": 0, "skipped": 2 },
+    "integration": { "pass": true, "total": 23, "passed": 22, "failed": 0, "skipped": 1 },
     "performance": { "pass": true, "regressions": 0 }
   },
   "binaries": [

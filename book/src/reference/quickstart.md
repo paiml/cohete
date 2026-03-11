@@ -36,7 +36,7 @@ This runs all 5 tiers and prints JSON results to stdout.
 2. **Tier 1: Smoke** — checks all 8 binaries exist and respond to `--version`
 3. **Tier 2: Hardware** — probes GPU, CUDA, memory, disk
 4. **Tier 3: Functional** — runs inference on each format x backend combination
-5. **Tier 4: Integration** — starts chat server, runs correctness + load tests
+5. **Tier 4: Integration** — starts chat server, runs correctness + UAT (19) + load tests
 6. **Tier 5: Performance** — benchmarks tok/s, checks for regressions
 
 ## Output

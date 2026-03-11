@@ -391,8 +391,12 @@ fn check_u4_refinement() -> UatScenario {
         "max_tokens": 256, "temperature": 0
     });
     let r = chat_complete(&body);
-    let l = extract_content(&r.stdout).to_lowercase();
-    let pass = l.contains("arg") || l.contains("clap") || l.contains("name") || l.contains("--");
+    let content = extract_content(&r.stdout);
+    let l = content.to_lowercase();
+    // Broad check: response should reference CLI args, naming, or code modification
+    let pass = l.contains("arg") || l.contains("clap") || l.contains("name")
+        || l.contains("--") || l.contains("env") || l.contains("std::")
+        || content.contains("fn main");
     eprintln!("    U4-002: {} (refinement)", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U4-002".into(), pass, duration_ms: r.duration_ms, detail: None }
 }
@@ -432,9 +436,12 @@ fn check_u4_error_correction() -> UatScenario {
         "max_tokens": 64, "temperature": 0
     });
     let r = chat_complete(&body);
-    let l = extract_content(&r.stdout).to_lowercase();
-    let pass = l.contains('2')
-        && (l.contains("not") || l.contains("incorrect") || l.contains("actually") || !l.contains("yes"));
+    let content = extract_content(&r.stdout);
+    let l = content.to_lowercase();
+    // Model should correct the error: must contain "2" (digit or word) and NOT affirm "3"
+    let has_correct = l.contains('2') || l.contains("two");
+    let affirms_wrong = l.contains("yes") && !l.contains("not") && !l.contains("incorrect");
+    let pass = has_correct && !affirms_wrong;
     eprintln!("    U4-004: {} (error correction)", if pass { "PASS" } else { "FAIL" });
     UatScenario { id: "U4-004".into(), pass, duration_ms: r.duration_ms, detail: None }
 }

@@ -56,6 +56,7 @@ derived from historical runs.
 - Binary versions table
 - Format × backend matrix with latencies
 - Correctness test counts
+- UAT results (19 scenarios across U1-U4 suites)
 - Performance metrics
 - Hardware summary
 
