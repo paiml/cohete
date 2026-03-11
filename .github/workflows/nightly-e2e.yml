@@ -43,12 +43,16 @@ jobs:
           mkdir -p artifacts/history
           cp artifacts/latest/summary.json "artifacts/history/${DATE}.json"
 
-      - name: Commit artifacts
+      - name: Generate status SVG and update README
+        if: always()
+        run: python3 scripts/generate-status.py
+
+      - name: Commit artifacts + status
         if: always()
         run: |
           git config user.name "cohete-bot"
           git config user.email "cohete@paiml.com"
-          git add artifacts/history/
+          git add artifacts/history/ docs/status.svg README.md
           PASS_STATUS=$(python3 -c "import json; d=json.load(open('artifacts/latest/summary.json')); print('pass' if d.get('pass') else 'FAIL')" 2>/dev/null || echo "FAIL")
           git diff --cached --quiet || git commit -m "nightly: $(date -u +%Y-%m-%d) [${PASS_STATUS}]"
           git push
