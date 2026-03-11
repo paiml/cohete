@@ -1,25 +1,25 @@
 {
   "version": "1.4.0",
-  "built_at": "2026-03-11T13:34:38.600260818+00:00",
+  "built_at": "2026-03-11T14:02:56.827114701+00:00",
   "project_root": "/home/noah/src/cohete",
-  "function_count": 108,
+  "function_count": 114,
   "file_count": 10,
   "languages": [
     "Rust",
     "Python"
   ],
-  "avg_tdg_score": 0.1266666,
+  "avg_tdg_score": 0.12280696,
   "file_checksums": {
-    "src/uat.rs": "dc3805b66f57c0af5fa50bca5e9dcbe28081f4344bb71b6a91c8328aa9f53bd9",
-    "src/tier3_functional.rs": "cde738144e62b703baeb900589260d89eaf25100500faa2c5986e30800510332",
-    "src/tier1_smoke.rs": "eeb54325cbe85dddc8dc05a8ac01b44f58605f819116ea1343e0066a5966b952",
-    "src/runner.rs": "005c215a9ae5c3deb61427be8516882214579750166209c2c4f83fdde1e8e1a3",
-    "src/tier5_performance.rs": "0a65856392ae16251d65733e25210d97139b652a1bab62cd3790e252e055380c",
-    "src/tier4_integration.rs": "bf13903378b847ba2e2db20f7acae45e853cac7fb94303e4642c25652687b3cf",
-    "src/tier2_hardware.rs": "b44fa9c76d6821ee496f05dceacfb1cf450e578c1bb1c3accce6285c47e1c6f5",
-    "scripts/generate-status.py": "3282c5aa04d1d84354062c1e78b7eb9b968db8418e1211cf0b729a46ae3e15a9",
     "src/main.rs": "3eadfa9d0c07dd0deef7e6084955cbd66f42016209c6413defa7b99a9315f58f",
-    "src/types.rs": "4cd976242ed1c83277718314b1e7100bae4db759727770572e7cad2ec6a43bdc"
+    "src/tier2_hardware.rs": "b44fa9c76d6821ee496f05dceacfb1cf450e578c1bb1c3accce6285c47e1c6f5",
+    "src/tier4_integration.rs": "715daa48be9b4cf7dcac7dd362feea004c1717b12bcce33a7680e44beaeff042",
+    "src/runner.rs": "e3526f91b80d716c50ef4bfee0cfb281ad500927ca2393f9cad13dfde2478903",
+    "src/tier3_functional.rs": "cde738144e62b703baeb900589260d89eaf25100500faa2c5986e30800510332",
+    "src/uat.rs": "cb38b45baaa6d5a0a05b77d920318741e025c5c7f1bde152377c864a8ff63d99",
+    "src/tier1_smoke.rs": "eeb54325cbe85dddc8dc05a8ac01b44f58605f819116ea1343e0066a5966b952",
+    "src/types.rs": "4cd976242ed1c83277718314b1e7100bae4db759727770572e7cad2ec6a43bdc",
+    "src/tier5_performance.rs": "0a65856392ae16251d65733e25210d97139b652a1bab62cd3790e252e055380c",
+    "scripts/generate-status.py": "3282c5aa04d1d84354062c1e78b7eb9b968db8418e1211cf0b729a46ae3e15a9"
   },
   "last_incremental_changes": 0
 }
