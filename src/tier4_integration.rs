@@ -93,6 +93,10 @@ fn run_server_tests(
     model_path: &str,
     config: &ModelConfig,
 ) -> (ModalityStatus, Option<CorrectnessStatus>, Option<uat::UatResult>, ModalityStatus) {
+    // Pre-flight: kill any stale server and wait for GPU memory release
+    cleanup_server();
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
     eprintln!("  M2: starting apr serve run on port {SERVE_PORT}...");
     let port_str = SERVE_PORT.to_string();
     let Some(mut child) = runner::spawn(
@@ -118,6 +122,22 @@ fn run_server_tests(
     let health = runner::shell(&health_cmd);
 
     let m2 = if health.success {
+        // Warmup: send a throwaway inference request to ensure model is loaded.
+        // The /health endpoint responds before the model is in GPU memory.
+        let warmup_body = serde_json::json!({
+            "model": "default",
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1, "temperature": 0
+        });
+        let warmup = runner::curl_post(&chat_url(), &warmup_body.to_string());
+        if !warmup.success {
+            eprintln!("  M2: warmup failed (model may not be loaded), retrying...");
+            std::thread::sleep(std::time::Duration::from_secs(3));
+            let retry = runner::curl_post(&chat_url(), &warmup_body.to_string());
+            if !retry.success {
+                eprintln!("  M2: warmup retry failed");
+            }
+        }
         eprintln!("  M2: chat server healthy");
         ModalityStatus { pass: true, detail: "health endpoint OK".into() }
     } else {

@@ -20,3 +20,4 @@
 - [CLI Usage](./reference/cli.md)
 - [Model Resolution](./reference/model-resolution.md)
 - [Nightly Workflow](./reference/nightly.md)
+- [Troubleshooting](./reference/troubleshooting.md)

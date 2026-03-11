@@ -26,38 +26,32 @@ params:
   temperature: "0"
 
 resources:
+  # Run cohete once, then extract per-suite results from the artifact.
+  # Previous design ran 4 separate cohete invocations — wasteful.
   uat-pipeline:
     machine: local
     type: task
     task_mode: pipeline
     stages:
-      - name: u1-chat-solve
+      - name: run-cohete
         command: |
-          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
-            | jq -r '.uat.U1_chat_problem_solving // empty'
+          cohete verify --max-tier 4 --allow-missing \
+            --output {{ params.artifacts_dir }}
         outputs: ["{{ params.artifacts_dir }}/integration.json"]
         gate: false
 
-      - name: u2-api-validate
+      - name: extract-results
         command: |
-          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
-            | jq -r '.uat.U2_serve_api // empty'
-        outputs: ["{{ params.artifacts_dir }}/integration.json"]
-        gate: false
-
-      - name: u3-kernel-prove
-        command: |
-          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
-            | jq -r '.uat.U3_kernel_provability // empty'
-        outputs: ["{{ params.artifacts_dir }}/integration.json"]
+          jq '{
+            U1: .uat.U1_chat_problem_solving,
+            U2: .uat.U2_serve_api,
+            U3: .uat.U3_kernel_provability,
+            U4: .uat.U4_task_chaining,
+            pass: .uat.pass,
+            total: .uat.total,
+            passed: .uat.passed
+          }' {{ params.artifacts_dir }}/integration.json
         gate: true
-
-      - name: u4-chain-tasks
-        command: |
-          cohete verify --max-tier 4 --stdout --allow-missing 2>/dev/null \
-            | jq -r '.uat.U4_task_chaining // empty'
-        outputs: ["{{ params.artifacts_dir }}/integration.json"]
-        gate: false
 
     quality_gate:
       parse: json
@@ -109,6 +103,6 @@ resources:
     type: task
     task_mode: dispatch
     command: |
-      cd {{ params.artifacts_dir }}/.. && python3 ../scripts/generate-status.py
+      python3 scripts/generate-status.py
     depends_on: [uat-pipeline]
     tags: [docs, readme]

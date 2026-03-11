@@ -225,10 +225,8 @@ resources:
     type: task
     task_mode: pipeline
     stages:
-      - name: u1-chat-solve
-      - name: u2-api-validate
-      - name: u3-kernel-prove
-      - name: u4-chain-tasks
+      - name: run-cohete      # Single E2E run writes artifacts
+      - name: extract-results  # jq extracts per-suite UAT results
 ```
 
 Standalone dispatch tasks (`kernel-reflexivity`, `format-parity`) are also available
@@ -283,10 +281,10 @@ UAT results are emitted as part of `integration.json` under a new `uat` key:
 
 | Suite | Passed | Total | Status |
 |-------|--------|-------|--------|
-| U1 Chat Solving | 5 | 5 | PASS |
-| U2 API Validation | 6 | 6 | PASS |
-| U3 Kernel Provability | 4 | 4 | PASS |
-| U4 Task Chaining | 4 | 4 | PASS |
+| U1 Chat Solving | 5 | 5 | ✅ |
+| U2 API Validation | 6 | 6 | ✅ |
+| U3 Kernel Provability | 4 | 4 | ✅ |
+| U4 Task Chaining | 4 | 4 | ✅ |
 ```
 
 ---
@@ -306,8 +304,11 @@ Issues discovered and fixed during E2E validation:
 | Spec claims wrong CLI syntax | `apr serve --model` and `apr run --model` in spec | Updated to `apr serve run <PATH>` and `apr run <PATH>` |
 | Spec claims wrong test counts | `functional: total=9`, `integration: total=4` | Updated to `total=13` and `total=23` (includes GPU/CPU split + UAT) |
 | Spec M4 claims concurrent | Load test described as "2 concurrent" | Updated to "2 sequential" (actual implementation) |
+| Back-to-back runs fail (2-4/19) | GPU memory not released between runs; `/health` responds before model loaded | Pre-flight `cleanup_server()` + 2s sleep + warmup inference request |
+| Spec README rendering uses "PASS" | `generate-status.py` actually emits emoji checkmarks | Updated spec examples to use emoji |
+| forjar-uat.yaml ran 4 cohete invocations | Pipeline had per-suite stages, each running full E2E | Refactored to single `run-cohete` stage + `extract-results` |
 
-**Reliability:** 5 consecutive dogfood runs, 19/19 each — 100% pass rate.
+**Reliability:** 3 consecutive back-to-back runs, 19/19 each — 100% pass rate.
 
 ---
 
