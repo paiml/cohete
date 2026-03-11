@@ -42,6 +42,23 @@ cross-compiles cohete for 5 targets:
 Binaries are packaged as `.tar.gz` (unix) or `.zip` (windows) with SHA256
 checksums and published as a nightly prerelease on GitHub.
 
+## Jetson Runner
+
+The self-hosted runner is a Jetson Orin Nano (8GB, 15W, CUDA 12.6).
+
+**Constraints:**
+- Shared CPU/GPU memory (8GB total, ~5.9GB available)
+- GPU JIT kernel compilation consumes ~1.5GB VRAM
+- Full 5-tier verification takes ~12 minutes
+- Job timeout: 25 minutes
+
+**Known behaviors:**
+- GPU inference may fail (Warn) due to VRAM exhaustion — CPU inference proves correctness
+- `apr pull` requires `--skip-contract` to bypass PMAT-237 tensor naming QA
+- Back-to-back runs need 2s GPU cooldown between server kills
+
+See [Troubleshooting](./troubleshooting.md) for common issues.
+
 ## History & Regression
 
 Daily snapshots in `artifacts/history/` enable tier 5 regression detection.

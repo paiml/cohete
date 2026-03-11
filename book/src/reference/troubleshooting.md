@@ -72,6 +72,34 @@ respond to `/health` within 30 seconds.
 **Cause:** Server ran out of memory or crashed during U1 (which sends
 5 prompts with `max_tokens: 256`). Check `dmesg` for OOM kills.
 
+### PMAT-237 contract validation blocks all apr commands
+
+**Symptom:** Every `apr` command (check, run, serve, parity) fails with:
+```
+error: Validation failed: PMAT-237 CONTRACT VIOLATION: model.gguf has N violations
+```
+
+**Cause:** Some `apr` builds enforce tensor naming contract validation by
+default. This is a metadata QA check, not a corruption issue.
+
+**Fix:** Cohete passes `--skip-contract` to all `apr` invocations automatically.
+If running `apr` manually, add `--skip-contract`:
+```bash
+apr run model.gguf --prompt "test" --skip-contract
+apr check model.gguf --skip-contract
+```
+
+### GPU inference fails but CPU passes (Jetson/constrained hardware)
+
+**Symptom:** `inference_gguf_gpu` reports WARN while `inference_gguf_cpu` passes.
+
+**Cause:** On devices with limited shared memory (e.g., Jetson Orin Nano 8GB),
+GPU JIT kernel compilation consumes significant VRAM, leaving insufficient
+memory for actual inference. The CPU path avoids GPU memory entirely.
+
+**Behavior:** Cohete reports GPU inference failure as Warn (not Fail) when
+the CPU path succeeds, since CPU inference proves model correctness.
+
 ## Model Issues
 
 ### No model found
@@ -99,6 +127,26 @@ apr pull hf://Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-
 <!-- NIGHTLY:BEGIN -->
 <!-- NIGHTLY:END -->
 ```
+
+## Nightly CI Issues
+
+### Job timeout (15 minutes exceeded)
+
+**Symptom:** Nightly run is cancelled with "exceeded maximum execution time."
+
+**Cause:** Full 5-tier verification with inference takes ~12 minutes on the
+Jetson Orin Nano. Tier 3 runs GPU inference, CPU inference, and parity
+(~45s each). Tier 4 starts a server and runs 19 UAT scenarios.
+
+**Fix:** Timeout is set to 25 minutes to give headroom.
+
+### `apr pull` fails with exit code 5
+
+**Symptom:** "Ensure model available" step fails after downloading.
+
+**Cause:** `apr pull` runs PMAT-237 contract validation after download.
+
+**Fix:** The workflow uses `--skip-contract` for `apr pull`.
 
 ### Stale artifacts from previous run
 
