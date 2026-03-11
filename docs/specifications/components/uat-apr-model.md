@@ -307,8 +307,14 @@ Issues discovered and fixed during E2E validation:
 | Back-to-back runs fail (2-4/19) | GPU memory not released between runs; `/health` responds before model loaded | Pre-flight `cleanup_server()` + 2s sleep + warmup inference request |
 | Spec README rendering uses "PASS" | `generate-status.py` actually emits emoji checkmarks | Updated spec examples to use emoji |
 | forjar-uat.yaml ran 4 cohete invocations | Pipeline had per-suite stages, each running full E2E | Refactored to single `run-cohete` stage + `extract-results` |
+| Nightly CI: `truncate_output` panic | Byte-slice at 1024 hits multi-byte UTF-8 (box-drawing `┬`) | Use `is_char_boundary()` to find nearest valid boundary |
+| Nightly CI: all apr commands fail | Jetson `apr` build enforces PMAT-237 contract validation by default | Add `--skip-contract` to all apr invocations |
+| Nightly CI: pmat smoke fails | Hardcoded `/home/noah/src/cohete` vs CI checkout path | Use `runner::run()` (inherits CWD) instead of shell `cd` |
+| Nightly CI: trueno-rag smoke fails | CLI syntax changed: `--sqlite` → `--path`/`--output`/`--db`/`--query` | Updated all trueno-rag invocations |
+| Nightly CI: `apr pull` fails (exit 5) | Post-download QA validation blocks model caching | Add `--skip-contract` to workflow `apr pull` |
 
-**Reliability:** 3 consecutive back-to-back runs, 19/19 each — 100% pass rate.
+**Reliability:** 3 consecutive back-to-back runs, 19/19 each — 100% pass rate (local).
+Nightly CI: fixing iteratively — 3 runs on Jetson so far (runs 22961847481–22962566776).
 
 ---
 
