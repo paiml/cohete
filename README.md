@@ -12,48 +12,37 @@ One binary, five tiers, falsifiable JSON artifacts.
 ```
 
 <!-- NIGHTLY:BEGIN -->
-*Last run: **2026-03-11** — **PASS** (176s)*
+*Last run: **2026-03-11** — **FAIL** (149s)*
 
 ### Tier Results
 
 | Tier | Name | Status | Passed | Failed | Skipped |
 |------|------|--------|--------|--------|---------|
-| 1 | Smoke | ❌ | 7 | 1 | 0 |
-| 2 | Hardware | ✅ | 1 | 0 | 0 |
-| 3 | Functional | ✅ | 10 | 0 | 2 |
-| 4 | Integration | ✅ | 22 | 0 | 1 |
-| 5 | Performance | — | — | — | — |
+| 1 | Smoke | ✅ | 8 | 0 | 0 |
+| 2 | Hardware | ❌ | 0 | 1 | 0 |
+| 3 | Functional | ❌ | 3 | 5 | 2 |
+| 4 | Integration | ❌ | 0 | 2 | 2 |
+| 5 | Performance | ✅ | 0 regressions | — | — |
 
 ### Binary Versions
 
 | Binary | Version | Status |
 |--------|---------|--------|
-| `apr` | 0.4.10 (eeef1eba) | ✅ installed |
+| `apr` | 0.4.10 (6d34b823) | ✅ installed |
 | `whisper-apr` | 0.2.4 | ✅ installed |
-| `trueno-rag` | — | ⬜ missing |
+| `trueno-rag` | 0.1.5 | ✅ installed |
 | `forjar` | 1.1.1 | ✅ installed |
 | `pmat` | 3.7.0 | ✅ installed |
 | `copia` | 0.1.3 | ✅ installed |
-| `pzsh` | 0.2.1 | ✅ installed |
+| `pzsh` | 0.3.5 | ✅ installed |
 | `batuta` | 0.7.2 | ✅ installed |
 
 ### Format x Backend Matrix
 
 |        | GPU | CPU |
 |--------|-----|-----|
-| **GGUF** | ✅ 3.7s | ✅ 3.0s |
-| **APR** | ✅ 13.5s | ✅ 12.1s |
-
-### Correctness (M3): 6/6 passed
-
-### UAT: Real-World Problem Solving
-
-| Suite | Passed | Total | Status |
-|-------|--------|-------|--------|
-| U1 Chat Solving | 5 | 5 | ✅ |
-| U2 API Validation | 6 | 6 | ✅ |
-| U3 Kernel Provability | 4 | 4 | ✅ |
-| U4 Task Chaining | 4 | 4 | ✅ |
+| **GGUF** | ❌ 27.1s | ❌ 27.1s |
+| **APR** | — | — |
 
 ### Performance
 
@@ -62,15 +51,17 @@ One binary, five tiers, falsifiable JSON artifacts.
 | Inference | — |
 | Whisper RTF | — |
 | RAG query | — |
-| Memory available | — |
+| Memory available | 5 GB |
 
 ### Hardware
 
 | Property | Value |
 |----------|-------|
-| GPU | NVIDIA GeForce RTX 4090 |
-| CUDA | 12.8 |
+| GPU | Orin (nvgpu) |
+| CUDA | 12.6 |
 | NEON | no |
+| JetPack | # R36 (release), REVISION: 5.0, GCID: 43688277, BOARD: generic, EABI: aarch64, DATE: Fri Jan 16 03:50:45 UTC 2026 |
+| Power | 15W |
 <!-- NIGHTLY:END -->
 
 ## Quick Start
