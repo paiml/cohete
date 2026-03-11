@@ -43,6 +43,17 @@ fn elapsed_ms(start: &std::time::Instant) -> u64 {
     u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
+/// Spawn a long-running process in the background (does not wait).
+/// Returns the child process handle for later cleanup.
+pub fn spawn(program: &str, args: &[&str]) -> Option<std::process::Child> {
+    Command::new(program)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .ok()
+}
+
 /// Check if a file exists and is executable.
 pub fn is_executable(path: &str) -> bool {
     std::fs::metadata(path)

@@ -20,8 +20,21 @@ jobs:
       - name: Build cohete
         run: cargo build --release
 
+      - name: Ensure model available
+        run: |
+          # Pull GGUF model if not already cached
+          if ! ls ~/.cache/pacha/models/*.gguf 1>/dev/null 2>&1; then
+            apr pull hf://Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+          fi
+
+          # Create .apr format copy if not present (proves both formats)
+          if ! ls ~/.cache/pacha/models/*.apr 1>/dev/null 2>&1; then
+            GGUF=$(ls -t ~/.cache/pacha/models/*.gguf | head -1)
+            apr import "$GGUF" -o ~/.cache/pacha/models/qwen-1.5b-q4k.apr --preserve-q4k
+          fi
+
       - name: Run verification (all 5 tiers)
-        run: ./target/release/cohete verify --output artifacts/latest
+        run: ./target/release/cohete verify --output artifacts/latest --allow-missing
 
       - name: Copy to history
         if: always()

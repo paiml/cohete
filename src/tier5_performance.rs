@@ -4,7 +4,7 @@
 //! Compares against 7-day rolling average from history/ to detect regressions.
 
 use crate::runner;
-use crate::types::{PerformanceMetrics, PerformanceResult, MODEL_PATH, TEST_AUDIO_PATH, WHISPER_MODEL_PATH};
+use crate::types::{ModelConfig, PerformanceMetrics, PerformanceResult};
 use std::path::Path;
 
 /// Regression threshold: 20% deviation from 7-day rolling average.
@@ -12,9 +12,9 @@ const REGRESSION_THRESHOLD: f64 = 0.20;
 /// Minimum history days required before regression detection activates.
 const MIN_HISTORY_DAYS: usize = 7;
 
-pub fn run(history_dir: Option<&Path>) -> PerformanceResult {
-    let inference_tok_s = bench_inference();
-    let whisper_rtf = bench_whisper();
+pub fn run(config: &ModelConfig, history_dir: Option<&Path>) -> PerformanceResult {
+    let inference_tok_s = bench_inference(config);
+    let whisper_rtf = bench_whisper(config);
     let rag_query_ms = bench_rag_query();
     let memory_available_mb = read_available_memory();
 
@@ -35,15 +35,15 @@ pub fn run(history_dir: Option<&Path>) -> PerformanceResult {
     }
 }
 
-fn bench_inference() -> Option<f64> {
-    if !std::path::Path::new(MODEL_PATH).exists() {
-        eprintln!("  inference bench: SKIP (model not present)");
+fn bench_inference(config: &ModelConfig) -> Option<f64> {
+    let Some(ref model_path) = config.model_path else {
+        eprintln!("  inference bench: SKIP (no model found)");
         return None;
-    }
+    };
 
     let result = runner::run(
         "apr",
-        &["bench", "--model", MODEL_PATH, "--tokens", "32"],
+        &["bench", model_path, "--max-tokens", "32"],
     );
 
     if !result.success {
@@ -74,18 +74,18 @@ fn bench_inference() -> Option<f64> {
     tok_s
 }
 
-fn bench_whisper() -> Option<f64> {
-    let model_exists = std::path::Path::new(WHISPER_MODEL_PATH).exists();
-    let audio_exists = std::path::Path::new(TEST_AUDIO_PATH).exists();
-
-    if !model_exists || !audio_exists {
+fn bench_whisper(config: &ModelConfig) -> Option<f64> {
+    if !config.has_whisper() {
         eprintln!("  whisper bench: SKIP");
         return None;
     }
 
+    let whisper_path = config.whisper_model_path.as_deref().unwrap_or("");
+    let audio_path = config.test_audio_path.as_deref().unwrap_or("");
+
     let result = runner::run(
         "whisper-apr",
-        &["bench", "--model", WHISPER_MODEL_PATH, "--input", TEST_AUDIO_PATH],
+        &["bench", "--model", whisper_path, "--input", audio_path],
     );
 
     if !result.success {
@@ -234,11 +234,6 @@ fn load_recent_metrics(dir: &Path, days: usize) -> Vec<PerformanceMetrics> {
             continue;
         };
 
-        // Extract performance metrics from summary.json history format
-        // The history file is a copy of summary.json — performance metrics
-        // are not directly in it. Try the top-level "metrics" field first
-        // (if someone stored performance.json), then fall back to parsing
-        // the tiers.performance section.
         let perf = extract_perf_metrics(&val);
         if perf.inference_tok_s.is_some()
             || perf.whisper_rtf.is_some()
@@ -253,7 +248,6 @@ fn load_recent_metrics(dir: &Path, days: usize) -> Vec<PerformanceMetrics> {
 
 /// Extract performance metrics from a history JSON value.
 fn extract_perf_metrics(val: &serde_json::Value) -> PerformanceMetrics {
-    // Try direct "metrics" field (if the history file is a performance.json)
     if let Some(m) = val.get("metrics") {
         return PerformanceMetrics {
             inference_tok_s: m.get("inference_tok_s").and_then(serde_json::Value::as_f64),
@@ -263,7 +257,6 @@ fn extract_perf_metrics(val: &serde_json::Value) -> PerformanceMetrics {
         };
     }
 
-    // Fallback: empty metrics
     PerformanceMetrics {
         inference_tok_s: None,
         whisper_rtf: None,

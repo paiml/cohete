@@ -35,6 +35,11 @@ enum Cli {
         /// Missing binaries are reported as warnings, not failures.
         #[arg(long, default_value_t = false)]
         allow_missing: bool,
+
+        /// Path to LLM model file (.gguf or .apr).
+        /// Overrides `COHETE_MODEL` env var and auto-discovery.
+        #[arg(long)]
+        model: Option<PathBuf>,
     },
 }
 
@@ -47,15 +52,17 @@ fn main() {
             max_tier,
             stdout,
             allow_missing,
+            model,
         } => {
             let max = max_tier.unwrap_or(5).clamp(1, 5);
-            let result = run_verify(&output, max, stdout, allow_missing);
+            let model_str = model.as_ref().map(|p| p.to_string_lossy().to_string());
+            let result = run_verify(&output, max, stdout, allow_missing, model_str.as_deref());
             std::process::exit(i32::from(!result));
         }
     }
 }
 
-fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) -> bool {
+fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool, cli_model: Option<&str>) -> bool {
     let started = chrono::Utc::now();
 
     if !stdout {
@@ -64,6 +71,10 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
             return false;
         }
     }
+
+    // Resolve model paths (CLI > env > cache > legacy)
+    eprintln!("=== Model Resolution ===");
+    let models = types::ModelConfig::resolve(cli_model);
 
     // Tier 1: Smoke (gate)
     eprintln!("=== Tier 1: Smoke ===");
@@ -93,10 +104,10 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
         None
     };
 
-    // Tier 3: Functional (M1, M5)
+    // Tier 3: Functional (M1, M5, GPU/CPU parity)
     let functional = if max_tier >= 3 {
         eprintln!("=== Tier 3: Functional ===");
-        let func = tier3_functional::run();
+        let func = tier3_functional::run(&models);
         emit("functional.json", &func, output, stdout);
         Some(func)
     } else {
@@ -106,7 +117,7 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
     // Tier 4: Integration (M2, M3, M4, M6)
     let integration = if max_tier >= 4 {
         eprintln!("=== Tier 4: Integration ===");
-        let integ = tier4_integration::run();
+        let integ = tier4_integration::run(&models);
         emit("integration.json", &integ, output, stdout);
         Some(integ)
     } else {
@@ -116,7 +127,7 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool) ->
     // Tier 5: Performance
     let performance = if max_tier >= 5 {
         eprintln!("=== Tier 5: Performance ===");
-        let perf = tier5_performance::run(history_ref);
+        let perf = tier5_performance::run(&models, history_ref);
         emit("performance.json", &perf, output, stdout);
         Some(perf)
     } else {

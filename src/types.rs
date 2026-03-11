@@ -45,9 +45,146 @@ pub const BINARIES: &[BinaryDef] = &[
     BinaryDef { name: "batuta", preferred_path: "/home/noah/.cargo/bin/batuta" },
 ];
 
-pub const MODEL_PATH: &str = "/home/noah/data/models/canary/qwen-1.5b-q4k.apr";
-pub const WHISPER_MODEL_PATH: &str = "/home/noah/data/models/canary/whisper-tiny.en";
-pub const TEST_AUDIO_PATH: &str = "/home/noah/data/models/canary/test-2s.wav";
+/// Legacy hardcoded paths (Jetson provisioned by forjar).
+const LEGACY_MODEL_PATH: &str = "/home/noah/data/models/canary/qwen-1.5b-q4k.apr";
+const LEGACY_WHISPER_PATH: &str = "/home/noah/data/models/canary/whisper-tiny.en";
+const LEGACY_AUDIO_PATH: &str = "/home/noah/data/models/canary/test-2s.wav";
+
+/// Known model cache directory used by `apr pull`.
+const PACHA_CACHE_DIR: &str = "/home/noah/.cache/pacha/models";
+
+/// Resolved model paths for the current run.
+/// Discovers both .gguf and .apr models to prove both formats work.
+/// Priority: CLI flag > env var > cache discovery > legacy path > None.
+#[allow(clippy::struct_field_names)]
+pub struct ModelConfig {
+    /// Primary model (any format). Used by tiers 4/5 for server + bench.
+    pub model_path: Option<String>,
+    /// GGUF-format model for format-specific verification.
+    pub gguf_path: Option<String>,
+    /// APR-format model for format-specific verification.
+    pub apr_path: Option<String>,
+    pub whisper_model_path: Option<String>,
+    pub test_audio_path: Option<String>,
+}
+
+impl ModelConfig {
+    /// Resolve model paths from all available sources.
+    pub fn resolve(cli_model: Option<&str>) -> Self {
+        let (gguf_path, apr_path) = discover_cached_models();
+
+        // CLI/env override becomes the primary model
+        let explicit = Self::resolve_explicit(cli_model);
+        // Primary model: explicit > gguf > apr
+        let model_path = explicit
+            .or_else(|| gguf_path.clone())
+            .or_else(|| apr_path.clone())
+            .or_else(|| {
+                if std::path::Path::new(LEGACY_MODEL_PATH).exists() {
+                    Some(LEGACY_MODEL_PATH.to_string())
+                } else {
+                    None
+                }
+            });
+
+        let whisper_model_path = Self::resolve_path_chain(
+            std::env::var("COHETE_WHISPER_MODEL").ok().as_deref(),
+            LEGACY_WHISPER_PATH,
+        );
+        let test_audio_path = Self::resolve_path_chain(
+            std::env::var("COHETE_TEST_AUDIO").ok().as_deref(),
+            LEGACY_AUDIO_PATH,
+        );
+
+        if let Some(ref p) = gguf_path {
+            eprintln!("  gguf: {p}");
+        }
+        if let Some(ref p) = apr_path {
+            eprintln!("  apr:  {p}");
+        }
+        if gguf_path.is_none() && apr_path.is_none() {
+            if let Some(ref p) = model_path {
+                eprintln!("  model: {p}");
+            } else {
+                eprintln!("  model: none found (set --model, COHETE_MODEL, or `apr pull`)");
+            }
+        }
+
+        Self { model_path, gguf_path, apr_path, whisper_model_path, test_audio_path }
+    }
+
+    /// Resolve explicit model from CLI flag or env var.
+    fn resolve_explicit(cli_model: Option<&str>) -> Option<String> {
+        if let Some(p) = cli_model {
+            if std::path::Path::new(p).exists() {
+                return Some(p.to_string());
+            }
+            eprintln!("  WARN: --model {p} does not exist");
+        }
+        if let Ok(p) = std::env::var("COHETE_MODEL") {
+            if std::path::Path::new(&p).exists() {
+                return Some(p);
+            }
+        }
+        None
+    }
+
+    fn resolve_path_chain(env_val: Option<&str>, legacy: &str) -> Option<String> {
+        if let Some(p) = env_val {
+            if std::path::Path::new(p).exists() {
+                return Some(p.to_string());
+            }
+        }
+        if std::path::Path::new(legacy).exists() {
+            return Some(legacy.to_string());
+        }
+        None
+    }
+
+    pub const fn has_model(&self) -> bool {
+        self.model_path.is_some()
+    }
+
+    pub const fn has_whisper(&self) -> bool {
+        self.whisper_model_path.is_some() && self.test_audio_path.is_some()
+    }
+}
+
+/// Discover cached models by format. Returns (newest .gguf, newest .apr).
+fn discover_cached_models() -> (Option<String>, Option<String>) {
+    let dir = std::path::Path::new(PACHA_CACHE_DIR);
+    if !dir.is_dir() {
+        return (None, None);
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return (None, None);
+    };
+
+    let mut best_gguf: Option<(std::time::SystemTime, std::path::PathBuf)> = None;
+    let mut best_apr: Option<(std::time::SystemTime, std::path::PathBuf)> = None;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        let mtime = entry.metadata().ok().and_then(|m| m.modified().ok());
+        let Some(t) = mtime else { continue };
+
+        if ext.eq_ignore_ascii_case("gguf") {
+            if best_gguf.as_ref().map_or(true, |(bt, _)| t > *bt) {
+                best_gguf = Some((t, path));
+            }
+        } else if ext.eq_ignore_ascii_case("apr")
+            && best_apr.as_ref().map_or(true, |(bt, _)| t > *bt)
+        {
+            best_apr = Some((t, path));
+        }
+    }
+
+    (
+        best_gguf.map(|(_, p)| p.to_string_lossy().to_string()),
+        best_apr.map(|(_, p)| p.to_string_lossy().to_string()),
+    )
+}
 
 // ─── Tier 1: Smoke ──────────────────────────────────────────
 

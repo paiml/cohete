@@ -3,6 +3,26 @@
 **Cohete** (Spanish: "rocket") proves the sovereign AI stack works on NVIDIA Jetson
 edge hardware every night. One repo, one binary, one CI job.
 
+## Quick Start
+
+```bash
+# 1. Install cohete
+cargo install --git https://github.com/paiml/cohete
+
+# 2. Pull a model (one-time ~1 GB download, cached in ~/.cache/pacha/models/)
+apr pull hf://Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+
+# 3. (Optional) Create an .apr format copy to verify both formats
+apr import ~/.cache/pacha/models/*.gguf -o ~/.cache/pacha/models/qwen-1.5b-q4k.apr --preserve-q4k
+
+# 4. Run — auto-discovers models from cache
+cohete verify --stdout --allow-missing
+```
+
+Cohete auto-discovers models from `~/.cache/pacha/models/`. You can also specify
+a model explicitly: `cohete verify --model /path/to/model.gguf` or via the
+`COHETE_MODEL` environment variable.
+
 ## How It Works
 
 ```
@@ -12,7 +32,8 @@ edge hardware every night. One repo, one binary, one CI job.
             → artifacts prove it
 ```
 
-Cohete runs **on the Jetson itself** (self-hosted GitHub Actions runner).
+Cohete runs on **any machine with `apr` installed** — dev workstations (x86_64),
+CI runners, and the Jetson itself (self-hosted GitHub Actions runner).
 It does not build or deploy — it only tests.
 
 ## Hardware
@@ -32,13 +53,16 @@ It does not build or deploy — it only tests.
 | LLM | [Qwen2.5-Coder-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct), Q4_K (~1 GB) |
 | Whisper | [whisper-tiny.en](https://huggingface.co/openai/whisper-tiny.en) (~75 MB) |
 
+Both `.gguf` (community standard) and `.apr` (native format with embedded tokenizer
+and Q4K fused kernels) are tested independently on GPU and CPU.
+
 ## Modality Matrix
 
 | # | Modality | Binary | Nightly Binary | What It Proves |
 |---|----------|--------|----------------|----------------|
-| M1 | CLI Inference | `apr run` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Model loads + generates tokens on aarch64 |
-| M2 | Chat Server | `apr serve` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | HTTP server responds on ARM |
-| M3 | Correctness | `cohete` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Correct code/math/SQL generation (6 tests) |
+| M1 | CLI Inference | `apr run` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | GGUF + APR formats produce correct output on GPU and CPU |
+| M2 | Chat Server | `apr serve run` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | HTTP server responds with OpenAI-compatible API |
+| M3 | Correctness | `cohete` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Correct code/math/SQL generation (6 tests, temperature=0) |
 | M4 | Load Test | `cohete` + `apr` | [aprender nightly](https://github.com/paiml/aprender/releases/tag/nightly) | Concurrent requests without OOM |
 | M5 | Transcription | `whisper-apr` | [whisper.apr nightly](https://github.com/paiml/whisper.apr/releases/tag/nightly) | Audio → text on ARM NEON |
 | M6 | RAG Pipeline | `whisper-apr` + `trueno-rag` | [trueno-rag nightly](https://github.com/paiml/trueno-rag/releases/tag/nightly) | Transcribe → index → query end-to-end |
@@ -69,11 +93,26 @@ It does not build or deploy — it only tests.
 |------|------|--------|-------|
 | 1 | Smoke (`--version` all 8 binaries) | 10s | **YES** |
 | 2 | Hardware (GPU, CUDA, Vulkan, NEON) | 15s | no |
-| 3 | Functional (M1 inference, M5 transcription) | 120s | no |
+| 3 | Functional (M1 inference GPU+CPU, format parity, M5 transcription) | 120s | no |
 | 4 | Integration (M2 server, M3 correctness, M4 load, M6 RAG) | 120s | no |
 | 5 | Performance (tok/s, whisper RTF, RAG latency) | 30s | no |
 
 Total: **< 5 minutes**.
+
+## Format x Backend Matrix (Tier 3)
+
+Cohete proves inference works across all combinations of model format and compute backend:
+
+| Test | Format | Backend | Pass Criteria |
+|------|--------|---------|---------------|
+| `inference_gguf_gpu` | GGUF | GPU (CUDA) | "What is 7*8?" → contains "56" |
+| `inference_gguf_cpu` | GGUF | CPU | "What is 7*8?" → contains "56" |
+| `inference_apr_gpu` | APR | GPU (CUDA) | "What is 7*8?" → contains "56" |
+| `inference_apr_cpu` | APR | CPU | "What is 7*8?" → contains "56" |
+| `gpu_cpu_parity` | any | both | `apr parity --assert` (informational) |
+
+GPU tests are skipped on CPU-only machines. APR tests require an `.apr` model in cache
+(create one with `apr import model.gguf -o model.apr --preserve-q4k`).
 
 ## Correctness Tests (M3)
 
@@ -86,7 +125,7 @@ Total: **< 5 minutes**.
 | code_explanation | "What does map do on a vector?" | Contains double/multiply/transform/2 |
 | sql_query | "Write SQL for top 5 users by orders" | Contains SELECT + ORDER BY + LIMIT |
 
-All tests: temperature=0, deterministic.
+All tests: temperature=0, deterministic, via `/v1/chat/completions` API.
 
 ## Nightly Schedule
 
@@ -121,6 +160,19 @@ artifacts/
 | Install on Jetson | forjar |
 | Verify they work | **cohete** |
 | Fix bugs | Upstream repo |
+
+## Model Resolution
+
+Cohete discovers models automatically. Priority order:
+
+1. `--model <path>` CLI flag
+2. `COHETE_MODEL` environment variable
+3. Auto-discovery from `~/.cache/pacha/models/` (newest `.gguf` and `.apr` files)
+4. Legacy Jetson path (`/home/noah/data/models/canary/`)
+
+When both `.gguf` and `.apr` files exist in cache, cohete tests both formats
+independently. Whisper models use `COHETE_WHISPER_MODEL` and `COHETE_TEST_AUDIO`
+environment variables.
 
 ## Specification
 

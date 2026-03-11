@@ -1,32 +1,28 @@
 //! Tier 4: Integration tests — cross-binary pipelines.
 //!
-//! M2: Chat server (apr serve)
+//! M2: Chat server (apr serve run)
 //! M3: Correctness (6 deterministic tests against chat server)
 //! M4: Load test (concurrent requests)
 //! M6: RAG pipeline (whisper → trueno-rag)
 
 use crate::runner;
 use crate::types::{
-    CorrectnessStatus, IntegrationModalities, IntegrationResult, ModalityStatus,
-    MODEL_PATH, TEST_AUDIO_PATH, WHISPER_MODEL_PATH,
+    CorrectnessStatus, IntegrationModalities, IntegrationResult, ModalityStatus, ModelConfig,
 };
 
 const SERVE_PORT: u16 = 8090; // Avoid common ports
 const SERVE_TIMEOUT_S: u64 = 30;
 
-pub fn run() -> IntegrationResult {
-    let model_present = std::path::Path::new(MODEL_PATH).exists();
-    let whisper_present = std::path::Path::new(WHISPER_MODEL_PATH).exists();
-    let audio_present = std::path::Path::new(TEST_AUDIO_PATH).exists();
-
+pub fn run(config: &ModelConfig) -> IntegrationResult {
     let mut total: u32 = 0;
     let mut passed: u32 = 0;
     let mut failed: u32 = 0;
     let mut skipped: u32 = 0;
 
     // M2 + M3 + M4: Chat server, correctness, and load test
-    let (m2, m3, m4) = if model_present {
-        let (server, correct, load) = run_server_tests();
+    let (m2, m3, m4) = if config.has_model() {
+        let model_path = config.model_path.as_deref().unwrap_or("");
+        let (server, correct, load) = run_server_tests(model_path);
         total += 3;
         count_status(&server, &mut passed, &mut failed, &mut skipped);
         if let Some(ref c) = correct {
@@ -37,16 +33,18 @@ pub fn run() -> IntegrationResult {
         count_modality_status(&load, &mut passed, &mut failed, &mut skipped);
         (Some(server), correct, Some(load))
     } else {
-        eprintln!("  M2/M3/M4: SKIP (model not present)");
+        eprintln!("  M2/M3/M4: SKIP (no model found — set --model, COHETE_MODEL, or `apr pull`)");
         total += 3;
         skipped += 3;
         (None, None, None)
     };
 
     // M6: RAG pipeline
-    let m6 = if whisper_present && audio_present {
+    let m6 = if config.has_whisper() {
         total += 1;
-        let rag = run_rag_pipeline();
+        let whisper_path = config.whisper_model_path.as_deref().unwrap_or("");
+        let audio_path = config.test_audio_path.as_deref().unwrap_or("");
+        let rag = run_rag_pipeline(whisper_path, audio_path);
         count_modality_status(&rag, &mut passed, &mut failed, &mut skipped);
         Some(rag)
     } else {
@@ -82,17 +80,21 @@ fn count_modality_status(ms: &ModalityStatus, passed: &mut u32, failed: &mut u32
     if ms.pass { *passed += 1; } else { *failed += 1; }
 }
 
-/// Start apr serve, run correctness + load tests, then stop server.
-fn run_server_tests() -> (ModalityStatus, Option<CorrectnessStatus>, ModalityStatus) {
-    // Start server in background
-    eprintln!("  M2: starting apr serve on port {SERVE_PORT}...");
-    let start_cmd = format!(
-        "apr serve --model {MODEL_PATH} --port {SERVE_PORT} &\n\
-         SERVER_PID=$!\n\
-         echo $SERVER_PID"
-    );
-    let start = runner::shell(&start_cmd);
-    let server_pid = start.stdout.trim().to_string();
+/// Start apr serve run, run correctness + load tests, then stop server.
+fn run_server_tests(model_path: &str) -> (ModalityStatus, Option<CorrectnessStatus>, ModalityStatus) {
+    eprintln!("  M2: starting apr serve run on port {SERVE_PORT}...");
+    let port_str = SERVE_PORT.to_string();
+    let Some(mut child) = runner::spawn(
+        "apr",
+        &["serve", "run", model_path, "--port", &port_str],
+    ) else {
+        eprintln!("  M2: failed to spawn apr serve");
+        return (
+            ModalityStatus { pass: false, detail: "failed to spawn apr serve".into() },
+            None,
+            ModalityStatus { pass: false, detail: "skipped (no server)".into() },
+        );
+    };
 
     // Wait for health endpoint
     let health_cmd = format!(
@@ -108,7 +110,9 @@ fn run_server_tests() -> (ModalityStatus, Option<CorrectnessStatus>, ModalitySta
         ModalityStatus { pass: true, detail: "health endpoint OK".into() }
     } else {
         eprintln!("  M2: chat server failed to start");
-        cleanup_server(&server_pid);
+        let _ = child.kill();
+        let _ = child.wait();
+        cleanup_server();
         return (
             ModalityStatus { pass: false, detail: "server did not become healthy".into() },
             None,
@@ -127,14 +131,14 @@ fn run_server_tests() -> (ModalityStatus, Option<CorrectnessStatus>, ModalitySta
     let m4 = run_load_test();
     eprintln!("  M4: load test {}", if m4.pass { "PASS" } else { "FAIL" });
 
-    cleanup_server(&server_pid);
+    let _ = child.kill();
+    let _ = child.wait();
+    cleanup_server();
 
     (m2, Some(m3), m4)
 }
 
 fn run_correctness_tests() -> CorrectnessStatus {
-    // Each test: (name, prompt, pass_check_fn)
-    // Pass criteria match the spec exactly.
     struct CorrectnessTest {
         name: &'static str,
         prompt: &'static str,
@@ -155,6 +159,7 @@ fn run_correctness_tests() -> CorrectnessStatus {
 
     for test in &tests {
         let body = serde_json::json!({
+            "model": "default",
             "messages": [{"role": "user", "content": test.prompt}],
             "max_tokens": 128,
             "temperature": 0
@@ -193,17 +198,13 @@ fn check_correctness(test_name: &str, output: &str) -> bool {
         "basic_math" => output.contains("56"),
         "python_fibonacci" => output.contains("def fib") || output.contains("def fibonacci"),
         "rust_hello" => output.contains("fn main"),
-        // Spec: Regex "name".*"Alice"
         "json_output" => output.contains("name") && output.contains("Alice"),
-        // Spec: Regex (double|multiply|2)
         "code_explanation" => {
             lower.contains("double")
                 || lower.contains("multiply")
                 || lower.contains("transform")
                 || output.contains('2')
-                || !output.is_empty() // fallback: any non-empty response
         }
-        // Spec: Regex SELECT.*ORDER BY.*LIMIT
         "sql_query" => {
             let up = output.to_uppercase();
             up.contains("SELECT") && up.contains("ORDER BY") && up.contains("LIMIT")
@@ -213,8 +214,8 @@ fn check_correctness(test_name: &str, output: &str) -> bool {
 }
 
 fn run_load_test() -> ModalityStatus {
-    // Simple load test: 2 concurrent curl requests
     let body = serde_json::json!({
+        "model": "default",
         "messages": [{"role": "user", "content": "Hello"}],
         "max_tokens": 16,
         "temperature": 0
@@ -236,13 +237,13 @@ fn run_load_test() -> ModalityStatus {
     }
 }
 
-fn run_rag_pipeline() -> ModalityStatus {
+fn run_rag_pipeline(whisper_path: &str, audio_path: &str) -> ModalityStatus {
     eprintln!("  M6: running RAG pipeline (transcribe → index → query)...");
 
     // Step 1: Transcribe
     let transcribe = runner::shell(&format!(
-        "whisper-apr transcribe {TEST_AUDIO_PATH} \
-         --model {WHISPER_MODEL_PATH} \
+        "whisper-apr transcribe {audio_path} \
+         --model {whisper_path} \
          -o /tmp/cohete-transcript.txt"
     ));
 
@@ -253,7 +254,7 @@ fn run_rag_pipeline() -> ModalityStatus {
         };
     }
 
-    // Step 2: Index (no jq dependency — use shell to build JSONL)
+    // Step 2: Index
     let index = runner::shell(
         "while IFS= read -r line; do \
            printf '{\"text\": \"%s\"}\\n' \"$line\"; \
@@ -285,11 +286,7 @@ fn run_rag_pipeline() -> ModalityStatus {
     }
 }
 
-fn cleanup_server(pid: &str) {
-    if !pid.is_empty() {
-        let _ = runner::shell(&format!("kill {pid} 2>/dev/null; wait {pid} 2>/dev/null"));
-    }
-    // Also kill any stray apr serve processes
+fn cleanup_server() {
     let _ = runner::shell("pkill -f 'apr serve' 2>/dev/null || true");
 }
 
