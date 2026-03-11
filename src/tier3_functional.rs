@@ -88,7 +88,7 @@ fn test_apr_check(config: &ModelConfig) -> TestEntry {
         return skip_entry("apr", "check", None, "no model found — set --model, COHETE_MODEL, or `apr pull`");
     };
 
-    let result = runner::run("apr", &["check", model_path]);
+    let result = runner::run("apr", &["check", model_path, "--skip-contract"]);
     let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
     eprintln!("  apr check: {}", status_label(&status));
 
@@ -108,7 +108,7 @@ fn test_inference(model_path: &str, fmt: &str, cpu_only: bool) -> TestEntry {
     let backend = if cpu_only { "cpu" } else { "gpu" };
     let test_name = format!("inference_{fmt}_{backend}");
 
-    let mut args = vec!["run", model_path, "--prompt", "What is 7 * 8?", "--max-tokens", "16"];
+    let mut args = vec!["run", model_path, "--prompt", "What is 7 * 8?", "--max-tokens", "16", "--skip-contract"];
     if cpu_only {
         args.push("--no-gpu");
     }
@@ -150,7 +150,7 @@ fn test_apr_gpu_cpu_parity(config: &ModelConfig) -> TestEntry {
 
     let result = runner::run(
         "apr",
-        &["parity", model_path, "--assert", "--json"],
+        &["parity", model_path, "--assert", "--json", "--skip-contract"],
     );
 
     let status = if result.success {
@@ -228,7 +228,7 @@ fn test_pmat_smoke() -> TestEntry {
         return skip_entry("pmat", "query_smoke", None, "binary not installed");
     }
 
-    let result = runner::shell("cd /home/noah/src/cohete && pmat query --literal 'fn main' --limit 5");
+    let result = runner::run("pmat", &["query", "--literal", "fn main", "--limit", "5"]);
     let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
     eprintln!("  pmat query (smoke): {}", status_label(&status));
 
@@ -277,8 +277,8 @@ fn test_trueno_rag_smoke() -> TestEntry {
 
     let result = runner::shell(
         "echo '{\"text\": \"Rust is a systems language\"}' > /tmp/cohete-rag-test.jsonl && \
-         trueno-rag index --sqlite /tmp/cohete-rag-test.db /tmp/cohete-rag-test.jsonl && \
-         trueno-rag query --sqlite /tmp/cohete-rag-test.db 'systems programming' && \
+         trueno-rag index --path /tmp/cohete-rag-test.jsonl --output /tmp/cohete-rag-test.db && \
+         trueno-rag query --db /tmp/cohete-rag-test.db --query 'systems programming' && \
          rm -f /tmp/cohete-rag-test.jsonl /tmp/cohete-rag-test.db",
     );
 

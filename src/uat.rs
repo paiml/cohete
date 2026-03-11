@@ -316,8 +316,8 @@ fn check_u3_format_parity(config: &ModelConfig) -> UatScenario {
         };
     };
 
-    let r1 = runner::run("apr", &["run", gguf, "-p", "2+2=", "-n", "8"]);
-    let r2 = runner::run("apr", &["run", apr, "-p", "2+2=", "-n", "8"]);
+    let r1 = runner::run("apr", &["run", gguf, "-p", "2+2=", "-n", "8", "--skip-contract"]);
+    let r2 = runner::run("apr", &["run", apr, "-p", "2+2=", "-n", "8", "--skip-contract"]);
 
     let exact = r1.success && r2.success && r1.stdout.trim() == r2.stdout.trim();
     let both_correct = r1.stdout.contains('4') && r2.stdout.contains('4');

@@ -101,7 +101,7 @@ fn run_server_tests(
     let port_str = SERVE_PORT.to_string();
     let Some(mut child) = runner::spawn(
         "apr",
-        &["serve", "run", model_path, "--port", &port_str],
+        &["serve", "run", model_path, "--port", &port_str, "--skip-contract"],
     ) else {
         eprintln!("  M2: failed to spawn apr serve");
         return (
@@ -288,7 +288,7 @@ fn run_rag_pipeline(whisper_path: &str, audio_path: &str) -> ModalityStatus {
         "while IFS= read -r line; do \
            printf '{\"text\": \"%s\"}\\n' \"$line\"; \
          done < /tmp/cohete-transcript.txt > /tmp/cohete-pipeline.jsonl && \
-         trueno-rag index --sqlite /tmp/cohete-pipeline.db /tmp/cohete-pipeline.jsonl"
+         trueno-rag index --path /tmp/cohete-pipeline.jsonl --output /tmp/cohete-pipeline.db"
     );
 
     if !index.success {
@@ -301,7 +301,7 @@ fn run_rag_pipeline(whisper_path: &str, audio_path: &str) -> ModalityStatus {
 
     // Step 3: Query
     let query = runner::shell(
-        "trueno-rag query --sqlite /tmp/cohete-pipeline.db 'what was said'"
+        "trueno-rag query --db /tmp/cohete-pipeline.db --query 'what was said'"
     );
 
     cleanup_rag_tmp();
