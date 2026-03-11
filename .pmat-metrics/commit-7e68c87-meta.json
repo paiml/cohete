@@ -1,0 +1,9 @@
+{
+  "commit_sha": null,
+  "work_item_id": "PMAT-015",
+  "prompt": "feat: APR model UAT sub-spec and forjar-based acceptance verification",
+  "tdg_score": 0.0,
+  "repo_score": 0.0,
+  "rust_project_score": 0.0,
+  "timestamp": "2026-03-11T13:35:54.077055284Z"
+}
