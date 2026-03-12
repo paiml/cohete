@@ -12,7 +12,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 ```
 
 <!-- NIGHTLY:BEGIN -->
-*Last run: **2026-03-11** — **FAIL** (965s)*
+*Last run: **2026-03-12** — **FAIL** (966s)*
 
 ### Tier Results
 
@@ -41,7 +41,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 
 |        | GPU | CPU |
 |--------|-----|-----|
-| **GGUF** | ⚠️ 18.4s | ✅ 13.3s |
+| **GGUF** | ⚠️ 18.9s | ✅ 13.6s |
 | **APR** | — | — |
 
 ### Correctness (M3): 6/6 passed
