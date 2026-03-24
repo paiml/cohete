@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "date": "2026-03-11",
-  "timestamp": "2026-03-11T17:09:30.463485527Z",
+  "date": "2026-03-23",
+  "timestamp": "2026-03-23T16:39:20.028551886Z",
   "cohete_version": "0.1.0",
   "pass": false,
-  "duration_s": 965,
+  "duration_s": 1236,
   "tiers": {
     "smoke": {
       "pass": true,
@@ -22,8 +22,8 @@
     },
     "functional": {
       "pass": true,
-      "total": 11,
-      "passed": 6,
+      "total": 13,
+      "passed": 9,
       "failed": 0,
       "skipped": 2
     },
@@ -42,7 +42,7 @@
   "binaries": [
     {
       "name": "apr",
-      "version": "apr 0.4.10 (6d34b823)",
+      "version": "apr 0.4.10 (526ac172)",
       "installed": true
     },
     {
@@ -93,6 +93,6 @@
     "inference_tok_s": null,
     "whisper_rtf": null,
     "rag_query_ms": null,
-    "memory_available_mb": 5915
+    "memory_available_mb": 6130
   }
 }

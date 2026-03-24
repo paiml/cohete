@@ -12,7 +12,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 ```
 
 <!-- NIGHTLY:BEGIN -->
-*Last run: **2026-03-11** — **FAIL** (965s)*
+*Last run: **2026-03-23** — **FAIL** (1236s)*
 
 ### Tier Results
 
@@ -20,7 +20,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 |------|------|--------|--------|--------|---------|
 | 1 | Smoke | ✅ | 8 | 0 | 0 |
 | 2 | Hardware | ❌ | 0 | 1 | 0 |
-| 3 | Functional | ❌ | 6 | 2 | 2 |
+| 3 | Functional | ✅ | 9 | 0 | 2 |
 | 4 | Integration | ✅ | 22 | 0 | 1 |
 | 5 | Performance | ✅ | 0 regressions | — | — |
 
@@ -28,7 +28,7 @@ One binary, five tiers, falsifiable JSON artifacts.
 
 | Binary | Version | Status |
 |--------|---------|--------|
-| `apr` | 0.4.10 (6d34b823) | ✅ installed |
+| `apr` | 0.4.10 (526ac172) | ✅ installed |
 | `whisper-apr` | 0.2.4 | ✅ installed |
 | `trueno-rag` | 0.1.5 | ✅ installed |
 | `forjar` | 1.1.1 | ✅ installed |
@@ -41,8 +41,8 @@ One binary, five tiers, falsifiable JSON artifacts.
 
 |        | GPU | CPU |
 |--------|-----|-----|
-| **GGUF** | ❌ 17.8s | ✅ 13.7s |
-| **APR** | — | — |
+| **GGUF** | ✅ 35.1s | ✅ 15.2s |
+| **APR** | ✅ 20.8s | ✅ 13.0s |
 
 ### Correctness (M3): 6/6 passed
 
