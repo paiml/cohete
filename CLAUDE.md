@@ -4,6 +4,14 @@
 
 cohete — Deployment and release automation for the Sovereign AI Stack
 
+## Contract-First Development
+
+All new features and bug fixes must follow provable-contract-first methodology:
+1. Write or update the contract YAML in `../provable-contracts/contracts/<crate>/`
+2. Run `pmat comply check` to validate compliance
+3. Implement the code to satisfy the contract
+4. Run `pmat comply check` again to confirm
+
 ## Stack Documentation Search (RAG Oracle)
 
 **IMPORTANT: Proactively use the batuta RAG oracle when:**
