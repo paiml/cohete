@@ -38,10 +38,17 @@ fn probe_gpu() -> Option<GpuInfo> {
         return None;
     }
 
-    let model = result.stdout.lines().next().unwrap_or("unknown").trim().to_string();
+    let model = result
+        .stdout
+        .lines()
+        .next()
+        .unwrap_or("unknown")
+        .trim()
+        .to_string();
 
     let cuda_version = {
-        let r = runner::shell("nvidia-smi | grep 'CUDA Version' | sed 's/.*CUDA Version: *//;s/ .*//'");
+        let r =
+            runner::shell("nvidia-smi | grep 'CUDA Version' | sed 's/.*CUDA Version: *//;s/ .*//'");
         if r.success && !r.stdout.is_empty() {
             Some(r.stdout.trim().to_string())
         } else {
@@ -49,7 +56,10 @@ fn probe_gpu() -> Option<GpuInfo> {
         }
     };
 
-    eprintln!("  GPU: {model}, CUDA: {}", cuda_version.as_deref().unwrap_or("n/a"));
+    eprintln!(
+        "  GPU: {model}, CUDA: {}",
+        cuda_version.as_deref().unwrap_or("n/a")
+    );
 
     Some(GpuInfo {
         model,
@@ -84,11 +94,7 @@ fn probe_cpu() -> CpuInfo {
     let neon_available = neon.stdout.trim() == "yes";
 
     let cores_result = runner::shell("nproc");
-    let cores = cores_result
-        .stdout
-        .trim()
-        .parse()
-        .unwrap_or(0);
+    let cores = cores_result.stdout.trim().parse().unwrap_or(0);
 
     eprintln!("  CPU cores: {cores}, NEON: {neon_available}");
 

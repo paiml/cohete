@@ -41,10 +41,7 @@ fn bench_inference(config: &ModelConfig) -> Option<f64> {
         return None;
     };
 
-    let result = runner::run(
-        "apr",
-        &["bench", model_path, "--max-tokens", "32"],
-    );
+    let result = runner::run("apr", &["bench", model_path, "--max-tokens", "32"]);
 
     if !result.success {
         eprintln!("  inference bench: SKIP (apr bench not available)");
@@ -58,8 +55,7 @@ fn bench_inference(config: &ModelConfig) -> Option<f64> {
         .chain(result.stderr.lines())
         .find_map(|line| {
             if line.contains("tok/s") || line.contains("tokens/s") {
-                line.split_whitespace()
-                    .find_map(|w| w.parse::<f64>().ok())
+                line.split_whitespace().find_map(|w| w.parse::<f64>().ok())
             } else {
                 None
             }
@@ -100,8 +96,7 @@ fn bench_whisper(config: &ModelConfig) -> Option<f64> {
         .chain(result.stderr.lines())
         .find_map(|line| {
             if line.contains("RTF") || line.contains("rtf") || line.contains("real-time") {
-                line.split_whitespace()
-                    .find_map(|w| w.parse::<f64>().ok())
+                line.split_whitespace().find_map(|w| w.parse::<f64>().ok())
             } else {
                 None
             }
@@ -127,7 +122,7 @@ fn bench_rag_query() -> Option<f64> {
     }
 
     let result = runner::shell(
-        "trueno-rag query --sqlite /tmp/cohete-perf.db 'systems programming' 2>/dev/null"
+        "trueno-rag query --sqlite /tmp/cohete-perf.db 'systems programming' 2>/dev/null",
     );
 
     let _ = runner::shell("rm -f /tmp/cohete-perf.jsonl /tmp/cohete-perf.db");
@@ -175,7 +170,9 @@ fn detect_regressions(metrics: &PerformanceMetrics, history_dir: Option<&Path>) 
         if let Some(avg) = rolling_avg(&avgs) {
             let delta = (today - avg) / avg;
             if delta < -REGRESSION_THRESHOLD {
-                eprintln!("  REGRESSION: inference {today:.1} tok/s vs avg {avg:.1} ({delta:+.0}%)");
+                eprintln!(
+                    "  REGRESSION: inference {today:.1} tok/s vs avg {avg:.1} ({delta:+.0}%)"
+                );
                 regressions += 1;
             }
         }
@@ -253,7 +250,9 @@ fn extract_perf_metrics(val: &serde_json::Value) -> PerformanceMetrics {
             inference_tok_s: m.get("inference_tok_s").and_then(serde_json::Value::as_f64),
             whisper_rtf: m.get("whisper_rtf").and_then(serde_json::Value::as_f64),
             rag_query_ms: m.get("rag_query_ms").and_then(serde_json::Value::as_f64),
-            memory_available_mb: m.get("memory_available_mb").and_then(serde_json::Value::as_u64),
+            memory_available_mb: m
+                .get("memory_available_mb")
+                .and_then(serde_json::Value::as_u64),
         };
     }
 
