@@ -7,7 +7,6 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use serde::Serialize;
-use serde_json;
 
 /// Mirror of a tier result for benchmarking serialization throughput.
 #[derive(Serialize, Clone)]
@@ -38,11 +37,15 @@ fn make_tier_result(n: usize) -> BenchTierResult {
             duration_ms: 42 + i as u64,
         })
         .collect();
-    let passed = checks.iter().filter(|c| c.pass).count() as u32;
-    let failed = checks.len() as u32 - passed;
+    // u32::try_from rather than `as`: a `usize -> u32` cast silently truncates on
+    // 64-bit targets. These counts are bench fixture sizes so they never overflow
+    // in practice, but the cast is what clippy denies and the gate is right to.
+    let passed = u32::try_from(checks.iter().filter(|c| c.pass).count()).unwrap_or(u32::MAX);
+    let total = u32::try_from(checks.len()).unwrap_or(u32::MAX);
+    let failed = total - passed;
     BenchTierResult {
         pass: failed == 0,
-        total: checks.len() as u32,
+        total,
         passed,
         failed,
         checks,
