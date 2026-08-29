@@ -7,7 +7,6 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use serde::Serialize;
-use serde_json;
 
 /// Mirror of a tier result for benchmarking serialization throughput.
 #[derive(Serialize, Clone)]
@@ -38,11 +37,17 @@ fn make_tier_result(n: usize) -> BenchTierResult {
             duration_ms: 42 + i as u64,
         })
         .collect();
-    let passed = checks.iter().filter(|c| c.pass).count() as u32;
-    let failed = checks.len() as u32 - passed;
+    // `try_from`, not `as`: a bench fixture is still code, and `as u32` on a
+    // usize is the silent-truncation class this repo's own gate rejects. The
+    // counts here are small by construction, so the expect() can only fire if
+    // someone rewrites make_tier_result to build billions of checks.
+    let passed = u32::try_from(checks.iter().filter(|c| c.pass).count())
+        .expect("bench fixture check count fits in u32");
+    let total = u32::try_from(checks.len()).expect("bench fixture check count fits in u32");
+    let failed = total - passed;
     BenchTierResult {
         pass: failed == 0,
-        total: checks.len() as u32,
+        total,
         passed,
         failed,
         checks,

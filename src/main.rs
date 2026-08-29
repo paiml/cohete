@@ -16,7 +16,11 @@ use clap::Parser;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
-#[command(name = "cohete", version, about = "Nightly E2E verification for the sovereign AI stack")]
+#[command(
+    name = "cohete",
+    version,
+    about = "Nightly E2E verification for the sovereign AI stack"
+)]
 enum Cli {
     /// Run all 5 verification tiers and emit JSON artifacts.
     Verify {
@@ -63,12 +67,21 @@ fn main() {
     }
 }
 
-fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool, cli_model: Option<&str>) -> bool {
+fn run_verify(
+    output: &Path,
+    max_tier: u8,
+    stdout: bool,
+    allow_missing: bool,
+    cli_model: Option<&str>,
+) -> bool {
     let started = chrono::Utc::now();
 
     if !stdout {
         if let Err(e) = std::fs::create_dir_all(output) {
-            eprintln!("error: cannot create output directory {}: {e}", output.display());
+            eprintln!(
+                "error: cannot create output directory {}: {e}",
+                output.display()
+            );
             return false;
         }
     }
@@ -87,7 +100,8 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool, cl
 
     if !smoke.pass && !allow_missing {
         eprintln!("FATAL: tier 1 smoke failed — aborting (use --allow-missing to continue)");
-        let summary = types::Summary::new(started, false, &smoke, None, None, None, None, history_ref);
+        let summary =
+            types::Summary::new(started, false, &smoke, None, None, None, None, history_ref);
         emit("summary.json", &summary, output, stdout);
         return false;
     }
@@ -135,7 +149,11 @@ fn run_verify(output: &Path, max_tier: u8, stdout: bool, allow_missing: bool, cl
         None
     };
 
-    let smoke_ok = if allow_missing { smoke.pass_installed() } else { smoke.pass };
+    let smoke_ok = if allow_missing {
+        smoke.pass_installed()
+    } else {
+        smoke.pass
+    };
     let pass = smoke_ok
         && hardware.as_ref().map_or(true, |h| h.pass)
         && functional.as_ref().map_or(true, |f| f.pass)

@@ -27,7 +27,11 @@ pub fn run(config: &ModelConfig) -> IntegrationResult {
         total += 3;
         count_status(&server, &mut passed, &mut failed, &mut skipped);
         if let Some(ref c) = correct {
-            if c.pass { passed += 1; } else { failed += 1; }
+            if c.pass {
+                passed += 1;
+            } else {
+                failed += 1;
+            }
         } else {
             skipped += 1;
         }
@@ -81,18 +85,36 @@ pub fn run(config: &ModelConfig) -> IntegrationResult {
 }
 
 fn count_status(ms: &ModalityStatus, passed: &mut u32, failed: &mut u32, _skipped: &mut u32) {
-    if ms.pass { *passed += 1; } else { *failed += 1; }
+    if ms.pass {
+        *passed += 1;
+    } else {
+        *failed += 1;
+    }
 }
 
-fn count_modality_status(ms: &ModalityStatus, passed: &mut u32, failed: &mut u32, _skipped: &mut u32) {
-    if ms.pass { *passed += 1; } else { *failed += 1; }
+fn count_modality_status(
+    ms: &ModalityStatus,
+    passed: &mut u32,
+    failed: &mut u32,
+    _skipped: &mut u32,
+) {
+    if ms.pass {
+        *passed += 1;
+    } else {
+        *failed += 1;
+    }
 }
 
 /// Start apr serve run, run correctness + UAT + load tests, then stop server.
 fn run_server_tests(
     model_path: &str,
     config: &ModelConfig,
-) -> (ModalityStatus, Option<CorrectnessStatus>, Option<uat::UatResult>, ModalityStatus) {
+) -> (
+    ModalityStatus,
+    Option<CorrectnessStatus>,
+    Option<uat::UatResult>,
+    ModalityStatus,
+) {
     // Pre-flight: kill any stale server and wait for GPU memory release
     cleanup_server();
     std::thread::sleep(std::time::Duration::from_secs(2));
@@ -101,14 +123,27 @@ fn run_server_tests(
     let port_str = SERVE_PORT.to_string();
     let Some(mut child) = runner::spawn(
         "apr",
-        &["serve", "run", model_path, "--port", &port_str, "--skip-contract"],
+        &[
+            "serve",
+            "run",
+            model_path,
+            "--port",
+            &port_str,
+            "--skip-contract",
+        ],
     ) else {
         eprintln!("  M2: failed to spawn apr serve");
         return (
-            ModalityStatus { pass: false, detail: "failed to spawn apr serve".into() },
+            ModalityStatus {
+                pass: false,
+                detail: "failed to spawn apr serve".into(),
+            },
             None,
             None,
-            ModalityStatus { pass: false, detail: "skipped (no server)".into() },
+            ModalityStatus {
+                pass: false,
+                detail: "skipped (no server)".into(),
+            },
         );
     };
 
@@ -139,26 +174,32 @@ fn run_server_tests(
             }
         }
         eprintln!("  M2: chat server healthy");
-        ModalityStatus { pass: true, detail: "health endpoint OK".into() }
+        ModalityStatus {
+            pass: true,
+            detail: "health endpoint OK".into(),
+        }
     } else {
         eprintln!("  M2: chat server failed to start");
         let _ = child.kill();
         let _ = child.wait();
         cleanup_server();
         return (
-            ModalityStatus { pass: false, detail: "server did not become healthy".into() },
+            ModalityStatus {
+                pass: false,
+                detail: "server did not become healthy".into(),
+            },
             None,
             None,
-            ModalityStatus { pass: false, detail: "skipped (no server)".into() },
+            ModalityStatus {
+                pass: false,
+                detail: "skipped (no server)".into(),
+            },
         );
     };
 
     // M3: Correctness tests
     let m3 = run_correctness_tests();
-    eprintln!(
-        "  M3: correctness {}/{} passed",
-        m3.passed, m3.total
-    );
+    eprintln!("  M3: correctness {}/{} passed", m3.passed, m3.total);
 
     // UAT: Real-world problem solving (U1-U4) — server is alive
     let uat_r = uat::run(config);
@@ -288,7 +329,7 @@ fn run_rag_pipeline(whisper_path: &str, audio_path: &str) -> ModalityStatus {
         "while IFS= read -r line; do \
            printf '{\"text\": \"%s\"}\\n' \"$line\"; \
          done < /tmp/cohete-transcript.txt > /tmp/cohete-pipeline.jsonl && \
-         trueno-rag index --path /tmp/cohete-pipeline.jsonl --output /tmp/cohete-pipeline.db"
+         trueno-rag index --path /tmp/cohete-pipeline.jsonl --output /tmp/cohete-pipeline.db",
     );
 
     if !index.success {
@@ -300,9 +341,8 @@ fn run_rag_pipeline(whisper_path: &str, audio_path: &str) -> ModalityStatus {
     }
 
     // Step 3: Query
-    let query = runner::shell(
-        "trueno-rag query --db /tmp/cohete-pipeline.db --query 'what was said'"
-    );
+    let query =
+        runner::shell("trueno-rag query --db /tmp/cohete-pipeline.db --query 'what was said'");
 
     cleanup_rag_tmp();
 
@@ -311,7 +351,11 @@ fn run_rag_pipeline(whisper_path: &str, audio_path: &str) -> ModalityStatus {
 
     ModalityStatus {
         pass,
-        detail: if pass { "transcribe→index→query complete".into() } else { format!("query failed: {}", query.stderr) },
+        detail: if pass {
+            "transcribe→index→query complete".into()
+        } else {
+            format!("query failed: {}", query.stderr)
+        },
     }
 }
 
@@ -320,5 +364,7 @@ fn cleanup_server() {
 }
 
 fn cleanup_rag_tmp() {
-    let _ = runner::shell("rm -f /tmp/cohete-transcript.txt /tmp/cohete-pipeline.jsonl /tmp/cohete-pipeline.db");
+    let _ = runner::shell(
+        "rm -f /tmp/cohete-transcript.txt /tmp/cohete-pipeline.jsonl /tmp/cohete-pipeline.db",
+    );
 }
