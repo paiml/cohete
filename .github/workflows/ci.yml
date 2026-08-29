@@ -16,3 +16,41 @@ jobs:
       repo: ${{ github.event.repository.name }}
     secrets: inherit
 
+
+  # THE `gate` CONTEXT, LITERALLY.
+  #
+  # The org ruleset `Green Main` requires a status context named `gate` of every
+  # repo it selects (`~ALL`). A reusable-workflow call emits `<job id> / <inner
+  # job name>` — so the `ci` job above produces `ci / gate`, `ci / test`, and so
+  # on, and NEVER a bare `gate`. Contexts are matched literally, so `ci / gate`
+  # does not satisfy the rule.
+  #
+  # The effect was invisible and unfixable from inside a PR: every check green,
+  # `mergeStateStatus: BLOCKED`, and the only way through `--admin`, which the
+  # org rules correctly forbid. Same shape as paiml/infra#347, found in cohete by
+  # machines/clean-room/ruleset-context-guard.sh on its first live run.
+  #
+  # THIS AGGREGATOR MUST MEASURE SOMETHING. A `gate` that is `run: exit 0`
+  # satisfies the ruleset and is strictly worse than the block it replaces, and
+  # `if: always()` WITHOUT inspecting `needs.*.result` is exactly that — a job
+  # that is green whatever happened upstream. So it reads the result explicitly
+  # and fails on anything that is not `success`.
+  gate:
+    # NOT ubuntu-latest. `gate` is a REQUIRED context, so a hosted-minutes
+    # billing state we do not control could block every merge in this repo
+    # while the 16-runner fleet sat idle and healthy. The fleet is the
+    # deterministic substrate (same reasoning as paiml/infra ci.yml).
+    runs-on: [self-hosted, clean-room]
+    needs: [ci]
+    if: always()
+    steps:
+      - name: Every required job must have succeeded
+        run: |
+          set -euo pipefail
+          result='${{ needs.ci.result }}'
+          echo "ci: $result"
+          if [ "$result" != "success" ]; then
+            echo "::error::the ci job did not succeed (result: $result)"
+            exit 1
+          fi
+          echo "All required jobs passed"
