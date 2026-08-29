@@ -61,11 +61,19 @@ pub fn run(config: &ModelConfig) -> UatResult {
 
     eprintln!(
         "  UAT: {passed}/{total} passed (U1:{}/{} U2:{}/{} U3:{}/{} U4:{}/{})",
-        u1.passed, u1.total, u2.passed, u2.total,
-        u3.passed, u3.total, u4.passed, u4.total
+        u1.passed, u1.total, u2.passed, u2.total, u3.passed, u3.total, u4.passed, u4.total
     );
 
-    UatResult { pass: failed == 0, total, passed, failed, u1, u2, u3, u4 }
+    UatResult {
+        pass: failed == 0,
+        total,
+        passed,
+        failed,
+        u1,
+        u2,
+        u3,
+        u4,
+    }
 }
 
 /// Build the chat completions URL for the running server.
@@ -99,25 +107,40 @@ type ChatScenario = (&'static str, &'static str, fn(&str) -> bool);
 
 fn run_u1_chat_solving() -> UatSuite {
     let scenarios: &[ChatScenario] = &[
-        ("U1-001", "Write a Rust function that parses a line of CSV into fields", |out| {
-            let l = out.to_lowercase();
-            l.contains("fn") && (l.contains("split") || l.contains("csv"))
-        }),
-        ("U1-002", "Add error handling to this: fn div(a: i32, b: i32) -> i32 { a / b }", |out| {
-            let l = out.to_lowercase();
-            (l.contains("result") || l.contains("option")) && l.contains('0')
-        }),
-        ("U1-003", "Write a test for: fn add(a: i32, b: i32) -> i32 { a + b }", |out| {
-            out.contains("#[test]") && out.contains("assert")
-        }),
-        ("U1-004", "This panics: vec![1,2,3][5]. Why and how to fix?", |out| {
-            let l = out.to_lowercase();
-            (l.contains("bound") || l.contains("index") || l.contains("range"))
-                && (l.contains("get") || l.contains("check") || l.contains("len"))
-        }),
+        (
+            "U1-001",
+            "Write a Rust function that parses a line of CSV into fields",
+            |out| {
+                let l = out.to_lowercase();
+                l.contains("fn") && (l.contains("split") || l.contains("csv"))
+            },
+        ),
+        (
+            "U1-002",
+            "Add error handling to this: fn div(a: i32, b: i32) -> i32 { a / b }",
+            |out| {
+                let l = out.to_lowercase();
+                (l.contains("result") || l.contains("option")) && l.contains('0')
+            },
+        ),
+        (
+            "U1-003",
+            "Write a test for: fn add(a: i32, b: i32) -> i32 { a + b }",
+            |out| out.contains("#[test]") && out.contains("assert"),
+        ),
+        (
+            "U1-004",
+            "This panics: vec![1,2,3][5]. Why and how to fix?",
+            |out| {
+                let l = out.to_lowercase();
+                (l.contains("bound") || l.contains("index") || l.contains("range"))
+                    && (l.contains("get") || l.contains("check") || l.contains("len"))
+            },
+        ),
         ("U1-005", "Write binary search in Python", |out| {
             let l = out.to_lowercase();
-            l.contains("def") && l.contains("return")
+            l.contains("def")
+                && l.contains("return")
                 && (l.contains("mid") || l.contains("//") || l.contains(">>"))
         }),
     ];
@@ -145,17 +168,27 @@ fn run_chat_suite(scenarios: &[ChatScenario]) -> UatSuite {
             false
         };
 
-        if pass { passed += 1; }
+        if pass {
+            passed += 1;
+        }
         eprintln!("    {id}: {}", if pass { "PASS" } else { "FAIL" });
 
         results.push(UatScenario {
-            id: id.to_string(), pass, duration_ms: result.duration_ms, detail: None,
+            id: id.to_string(),
+            pass,
+            duration_ms: result.duration_ms,
+            detail: None,
         });
     }
 
     #[allow(clippy::cast_possible_truncation)]
     let total = scenarios.len() as u32;
-    UatSuite { pass: passed == total, total, passed, scenarios: results }
+    UatSuite {
+        pass: passed == total,
+        total,
+        passed,
+        scenarios: results,
+    }
 }
 
 // ─── U2: Serve API Validation ──────────────────────────────
@@ -175,7 +208,12 @@ fn run_u2_api_validation() -> UatSuite {
     let total = checks.len() as u32;
     #[allow(clippy::cast_possible_truncation)]
     let passed = passed as u32;
-    UatSuite { pass: passed == total, total, passed, scenarios: checks }
+    UatSuite {
+        pass: passed == total,
+        total,
+        passed,
+        scenarios: checks,
+    }
 }
 
 fn check_u2_predict() -> UatScenario {
@@ -187,7 +225,12 @@ fn check_u2_predict() -> UatScenario {
     let r = chat_complete(&body);
     let pass = r.success && !extract_content(&r.stdout).is_empty();
     eprintln!("    U2-001: {}", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U2-001".into(), pass, duration_ms: r.duration_ms, detail: None }
+    UatScenario {
+        id: "U2-001".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }
 
 fn check_u2_streaming() -> UatScenario {
@@ -199,16 +242,27 @@ fn check_u2_streaming() -> UatScenario {
     let r = chat_complete(&body);
     let pass = r.success && (r.stdout.contains("data:") || r.stdout.contains("[DONE]"));
     eprintln!("    U2-002: {}", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U2-002".into(), pass, duration_ms: r.duration_ms, detail: None }
+    UatScenario {
+        id: "U2-002".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }
 
 fn check_u2_invalid_json() -> UatScenario {
     let url = chat_url();
     let r = runner::curl_post_status(&url, "{bad");
     let pass = !r.stdout.is_empty() && r.stdout != "000";
-    eprintln!("    U2-003: {} (status {})", if pass { "PASS" } else { "FAIL" }, r.stdout);
+    eprintln!(
+        "    U2-003: {} (status {})",
+        if pass { "PASS" } else { "FAIL" },
+        r.stdout
+    );
     UatScenario {
-        id: "U2-003".into(), pass, duration_ms: r.duration_ms,
+        id: "U2-003".into(),
+        pass,
+        duration_ms: r.duration_ms,
         detail: Some(format!("status={}", r.stdout)),
     }
 }
@@ -217,9 +271,15 @@ fn check_u2_missing_field() -> UatScenario {
     let url = chat_url();
     let r = runner::curl_post_status(&url, r#"{"messages":[]}"#);
     let pass = !r.stdout.is_empty() && r.stdout != "000";
-    eprintln!("    U2-004: {} (status {})", if pass { "PASS" } else { "FAIL" }, r.stdout);
+    eprintln!(
+        "    U2-004: {} (status {})",
+        if pass { "PASS" } else { "FAIL" },
+        r.stdout
+    );
     UatScenario {
-        id: "U2-004".into(), pass, duration_ms: r.duration_ms,
+        id: "U2-004".into(),
+        pass,
+        duration_ms: r.duration_ms,
         detail: Some(format!("status={}", r.stdout)),
     }
 }
@@ -228,7 +288,12 @@ fn check_u2_models() -> UatScenario {
     let r = runner::curl_get(&format!("http://localhost:{SERVE_PORT}/v1/models"));
     let pass = r.success && (r.stdout.contains("model") || r.stdout.contains("id"));
     eprintln!("    U2-005: {}", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U2-005".into(), pass, duration_ms: r.duration_ms, detail: None }
+    UatScenario {
+        id: "U2-005".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }
 
 fn check_u2_health_rapid() -> UatScenario {
@@ -244,7 +309,12 @@ fn check_u2_health_rapid() -> UatScenario {
     }
     let ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     eprintln!("    U2-006: {}", if all_ok { "PASS" } else { "FAIL" });
-    UatScenario { id: "U2-006".into(), pass: all_ok, duration_ms: ms, detail: None }
+    UatScenario {
+        id: "U2-006".into(),
+        pass: all_ok,
+        duration_ms: ms,
+        detail: None,
+    }
 }
 
 // ─── U3: Kernel Provability ────────────────────────────────
@@ -262,7 +332,12 @@ fn run_u3_kernel_provability(config: &ModelConfig) -> UatSuite {
     let total = checks.len() as u32;
     #[allow(clippy::cast_possible_truncation)]
     let passed = passed as u32;
-    UatSuite { pass: passed == total, total, passed, scenarios: checks }
+    UatSuite {
+        pass: passed == total,
+        total,
+        passed,
+        scenarios: checks,
+    }
 }
 
 fn check_u3_reflexivity() -> UatScenario {
@@ -281,10 +356,14 @@ fn check_u3_reflexivity() -> UatScenario {
     let c3 = extract_content(&r3.stdout);
 
     let all_identical = !c1.is_empty() && c1 == c2 && c2 == c3;
-    eprintln!("    U3-001: {} (reflexivity)", if all_identical { "PASS" } else { "FAIL" });
+    eprintln!(
+        "    U3-001: {} (reflexivity)",
+        if all_identical { "PASS" } else { "FAIL" }
+    );
 
     UatScenario {
-        id: "U3-001".into(), pass: all_identical,
+        id: "U3-001".into(),
+        pass: all_identical,
         duration_ms: r1.duration_ms + r2.duration_ms + r3.duration_ms,
         detail: Some(format!("runs=3, identical={all_identical}")),
     }
@@ -300,9 +379,14 @@ fn check_u3_cardinality() -> UatScenario {
     let content = extract_content(&r.stdout);
     let word_count = content.split_whitespace().count();
     let pass = r.success && word_count <= 30;
-    eprintln!("    U3-002: {} (cardinality, {word_count} words)", if pass { "PASS" } else { "FAIL" });
+    eprintln!(
+        "    U3-002: {} (cardinality, {word_count} words)",
+        if pass { "PASS" } else { "FAIL" }
+    );
     UatScenario {
-        id: "U3-002".into(), pass, duration_ms: r.duration_ms,
+        id: "U3-002".into(),
+        pass,
+        duration_ms: r.duration_ms,
         detail: Some(format!("max_tokens=8, words={word_count}")),
     }
 }
@@ -311,21 +395,33 @@ fn check_u3_format_parity(config: &ModelConfig) -> UatScenario {
     let (Some(gguf), Some(apr)) = (config.gguf_path.as_ref(), config.apr_path.as_ref()) else {
         eprintln!("    U3-003: SKIP (need both GGUF and APR)");
         return UatScenario {
-            id: "U3-003".into(), pass: true, duration_ms: 0,
+            id: "U3-003".into(),
+            pass: true,
+            duration_ms: 0,
             detail: Some("skipped: need both formats".into()),
         };
     };
 
-    let r1 = runner::run("apr", &["run", gguf, "-p", "2+2=", "-n", "8", "--skip-contract"]);
-    let r2 = runner::run("apr", &["run", apr, "-p", "2+2=", "-n", "8", "--skip-contract"]);
+    let r1 = runner::run(
+        "apr",
+        &["run", gguf, "-p", "2+2=", "-n", "8", "--skip-contract"],
+    );
+    let r2 = runner::run(
+        "apr",
+        &["run", apr, "-p", "2+2=", "-n", "8", "--skip-contract"],
+    );
 
     let exact = r1.success && r2.success && r1.stdout.trim() == r2.stdout.trim();
     let both_correct = r1.stdout.contains('4') && r2.stdout.contains('4');
     let pass = exact || both_correct;
 
-    eprintln!("    U3-003: {} (format parity)", if pass { "PASS" } else { "FAIL" });
+    eprintln!(
+        "    U3-003: {} (format parity)",
+        if pass { "PASS" } else { "FAIL" }
+    );
     UatScenario {
-        id: "U3-003".into(), pass,
+        id: "U3-003".into(),
+        pass,
         duration_ms: r1.duration_ms + r2.duration_ms,
         detail: Some(format!("exact={exact}, both_correct={both_correct}")),
     }
@@ -339,8 +435,16 @@ fn check_u3_token_stability() -> UatScenario {
     });
     let r = chat_complete(&body);
     let pass = extract_content(&r.stdout).contains('4');
-    eprintln!("    U3-004: {} (token stability)", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U3-004".into(), pass, duration_ms: r.duration_ms, detail: None }
+    eprintln!(
+        "    U3-004: {} (token stability)",
+        if pass { "PASS" } else { "FAIL" }
+    );
+    UatScenario {
+        id: "U3-004".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }
 
 // ─── U4: Task Chaining ─────────────────────────────────────
@@ -358,7 +462,12 @@ fn run_u4_task_chaining() -> UatSuite {
     let total = checks.len() as u32;
     #[allow(clippy::cast_possible_truncation)]
     let passed = passed as u32;
-    UatSuite { pass: passed == total, total, passed, scenarios: checks }
+    UatSuite {
+        pass: passed == total,
+        total,
+        passed,
+        scenarios: checks,
+    }
 }
 
 fn check_u4_two_turn() -> UatScenario {
@@ -373,9 +482,14 @@ fn check_u4_two_turn() -> UatScenario {
     });
     let r = chat_complete(&body);
     let pass = extract_content(&r.stdout).contains("42");
-    eprintln!("    U4-001: {} (two-turn context)", if pass { "PASS" } else { "FAIL" });
+    eprintln!(
+        "    U4-001: {} (two-turn context)",
+        if pass { "PASS" } else { "FAIL" }
+    );
     UatScenario {
-        id: "U4-001".into(), pass, duration_ms: r.duration_ms,
+        id: "U4-001".into(),
+        pass,
+        duration_ms: r.duration_ms,
         detail: Some("turns=2".into()),
     }
 }
@@ -394,22 +508,36 @@ fn check_u4_refinement() -> UatScenario {
     let content = extract_content(&r.stdout);
     let l = content.to_lowercase();
     // Broad check: response should reference CLI args, naming, or code modification
-    let pass = l.contains("arg") || l.contains("clap") || l.contains("name")
-        || l.contains("--") || l.contains("env") || l.contains("std::")
+    let pass = l.contains("arg")
+        || l.contains("clap")
+        || l.contains("name")
+        || l.contains("--")
+        || l.contains("env")
+        || l.contains("std::")
         || content.contains("fn main");
-    eprintln!("    U4-002: {} (refinement)", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U4-002".into(), pass, duration_ms: r.duration_ms, detail: None }
+    eprintln!(
+        "    U4-002: {} (refinement)",
+        if pass { "PASS" } else { "FAIL" }
+    );
+    UatScenario {
+        id: "U4-002".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }
 
 fn check_u4_rag_augmented() -> UatScenario {
     let rag = runner::shell(
-        "trueno-rag query --sqlite /tmp/cohete-pipeline.db 'systems programming' 2>/dev/null"
+        "trueno-rag query --sqlite /tmp/cohete-pipeline.db 'systems programming' 2>/dev/null",
     );
 
     if !rag.success || rag.stdout.trim().is_empty() {
         eprintln!("    U4-003: PASS (skipped, no RAG index)");
         return UatScenario {
-            id: "U4-003".into(), pass: true, duration_ms: 0,
+            id: "U4-003".into(),
+            pass: true,
+            duration_ms: 0,
             detail: Some("skipped: no RAG index".into()),
         };
     }
@@ -425,8 +553,16 @@ fn check_u4_rag_augmented() -> UatScenario {
     });
     let r = chat_complete(&body);
     let pass = !extract_content(&r.stdout).is_empty();
-    eprintln!("    U4-003: {} (RAG-augmented)", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U4-003".into(), pass, duration_ms: r.duration_ms, detail: None }
+    eprintln!(
+        "    U4-003: {} (RAG-augmented)",
+        if pass { "PASS" } else { "FAIL" }
+    );
+    UatScenario {
+        id: "U4-003".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }
 
 fn check_u4_error_correction() -> UatScenario {
@@ -442,6 +578,14 @@ fn check_u4_error_correction() -> UatScenario {
     let has_correct = l.contains('2') || l.contains("two");
     let affirms_wrong = l.contains("yes") && !l.contains("not") && !l.contains("incorrect");
     let pass = has_correct && !affirms_wrong;
-    eprintln!("    U4-004: {} (error correction)", if pass { "PASS" } else { "FAIL" });
-    UatScenario { id: "U4-004".into(), pass, duration_ms: r.duration_ms, detail: None }
+    eprintln!(
+        "    U4-004: {} (error correction)",
+        if pass { "PASS" } else { "FAIL" }
+    );
+    UatScenario {
+        id: "U4-004".into(),
+        pass,
+        duration_ms: r.duration_ms,
+        detail: None,
+    }
 }

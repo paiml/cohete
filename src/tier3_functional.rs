@@ -9,11 +9,13 @@ use crate::runner;
 use crate::types::{self, FunctionalResult, ModelConfig, TestEntry, TestStatus};
 
 pub fn run(config: &ModelConfig) -> FunctionalResult {
-    let gpu_available = runner::run("nvidia-smi", &["--query-gpu=name", "--format=csv,noheader"]).success;
+    let gpu_available =
+        runner::run("nvidia-smi", &["--query-gpu=name", "--format=csv,noheader"]).success;
 
     let mut tests = vec![test_apr_check(config)];
 
-    let has_any_model = config.gguf_path.is_some() || config.apr_path.is_some() || config.has_model();
+    let has_any_model =
+        config.gguf_path.is_some() || config.apr_path.is_some() || config.has_model();
     if !has_any_model {
         eprintln!("  inference: SKIP (no model found — set --model, COHETE_MODEL, or `apr pull`)");
         tests.push(skip_entry("apr", "inference", Some("M1"), "no model found"));
@@ -58,13 +60,25 @@ pub fn run(config: &ModelConfig) -> FunctionalResult {
     ]);
 
     #[allow(clippy::cast_possible_truncation)]
-    let passed = tests.iter().filter(|t| t.status == TestStatus::Pass).count() as u32;
+    let passed = tests
+        .iter()
+        .filter(|t| t.status == TestStatus::Pass)
+        .count() as u32;
     #[allow(clippy::cast_possible_truncation)]
-    let skipped = tests.iter().filter(|t| t.status == TestStatus::Skip).count() as u32;
+    let skipped = tests
+        .iter()
+        .filter(|t| t.status == TestStatus::Skip)
+        .count() as u32;
     #[allow(clippy::cast_possible_truncation)]
-    let failed = tests.iter().filter(|t| t.status == TestStatus::Fail).count() as u32;
+    let failed = tests
+        .iter()
+        .filter(|t| t.status == TestStatus::Fail)
+        .count() as u32;
     #[allow(clippy::cast_possible_truncation)]
-    let warned = tests.iter().filter(|t| t.status == TestStatus::Warn).count() as u32;
+    let warned = tests
+        .iter()
+        .filter(|t| t.status == TestStatus::Warn)
+        .count() as u32;
     #[allow(clippy::cast_possible_truncation)]
     let total = tests.len() as u32;
 
@@ -85,11 +99,20 @@ pub fn run(config: &ModelConfig) -> FunctionalResult {
 fn test_apr_check(config: &ModelConfig) -> TestEntry {
     let Some(ref model_path) = config.model_path else {
         eprintln!("  apr check: SKIP (no model found)");
-        return skip_entry("apr", "check", None, "no model found — set --model, COHETE_MODEL, or `apr pull`");
+        return skip_entry(
+            "apr",
+            "check",
+            None,
+            "no model found — set --model, COHETE_MODEL, or `apr pull`",
+        );
     };
 
     let result = runner::run("apr", &["check", model_path, "--skip-contract"]);
-    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
+    let status = if result.success {
+        TestStatus::Pass
+    } else {
+        TestStatus::Fail
+    };
     eprintln!("  apr check: {}", status_label(&status));
 
     TestEntry {
@@ -108,7 +131,15 @@ fn test_inference(model_path: &str, fmt: &str, cpu_only: bool) -> TestEntry {
     let backend = if cpu_only { "cpu" } else { "gpu" };
     let test_name = format!("inference_{fmt}_{backend}");
 
-    let mut args = vec!["run", model_path, "--prompt", "What is 7 * 8?", "--max-tokens", "16", "--skip-contract"];
+    let mut args = vec![
+        "run",
+        model_path,
+        "--prompt",
+        "What is 7 * 8?",
+        "--max-tokens",
+        "16",
+        "--skip-contract",
+    ];
     if cpu_only {
         args.push("--no-gpu");
     }
@@ -130,7 +161,11 @@ fn test_inference(model_path: &str, fmt: &str, cpu_only: bool) -> TestEntry {
         TestStatus::Fail
     };
 
-    eprintln!("  apr {fmt} {backend} (M1): {} ({}ms)", status_label(&status), result.duration_ms);
+    eprintln!(
+        "  apr {fmt} {backend} (M1): {} ({}ms)",
+        status_label(&status),
+        result.duration_ms
+    );
 
     TestEntry {
         binary: "apr".into(),
@@ -158,7 +193,13 @@ fn test_apr_gpu_cpu_parity(config: &ModelConfig) -> TestEntry {
 
     let result = runner::run(
         "apr",
-        &["parity", model_path, "--assert", "--json", "--skip-contract"],
+        &[
+            "parity",
+            model_path,
+            "--assert",
+            "--json",
+            "--skip-contract",
+        ],
     );
 
     let status = if result.success {
@@ -166,7 +207,11 @@ fn test_apr_gpu_cpu_parity(config: &ModelConfig) -> TestEntry {
     } else {
         TestStatus::Warn
     };
-    eprintln!("  apr GPU/CPU parity: {} ({}ms)", status_label(&status), result.duration_ms);
+    eprintln!(
+        "  apr GPU/CPU parity: {} ({}ms)",
+        status_label(&status),
+        result.duration_ms
+    );
 
     TestEntry {
         binary: "apr".into(),
@@ -181,7 +226,12 @@ fn test_apr_gpu_cpu_parity(config: &ModelConfig) -> TestEntry {
 fn test_whisper_transcribe(config: &ModelConfig) -> TestEntry {
     if !config.has_whisper() {
         eprintln!("  whisper-apr transcribe: SKIP (model or audio not present)");
-        return skip_entry("whisper-apr", "transcribe", Some("M5"), "model or audio fixture not present");
+        return skip_entry(
+            "whisper-apr",
+            "transcribe",
+            Some("M5"),
+            "model or audio fixture not present",
+        );
     }
 
     let whisper_path = config.whisper_model_path.as_deref().unwrap_or("");
@@ -192,8 +242,16 @@ fn test_whisper_transcribe(config: &ModelConfig) -> TestEntry {
         &["transcribe", audio_path, "--model", whisper_path],
     );
 
-    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
-    eprintln!("  whisper-apr transcribe (M5): {} ({}ms)", status_label(&status), result.duration_ms);
+    let status = if result.success {
+        TestStatus::Pass
+    } else {
+        TestStatus::Fail
+    };
+    eprintln!(
+        "  whisper-apr transcribe (M5): {} ({}ms)",
+        status_label(&status),
+        result.duration_ms
+    );
 
     TestEntry {
         binary: "whisper-apr".into(),
@@ -237,7 +295,11 @@ fn test_pmat_smoke() -> TestEntry {
     }
 
     let result = runner::run("pmat", &["query", "--literal", "fn main", "--limit", "5"]);
-    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
+    let status = if result.success {
+        TestStatus::Pass
+    } else {
+        TestStatus::Fail
+    };
     eprintln!("  pmat query (smoke): {}", status_label(&status));
 
     TestEntry {
@@ -264,7 +326,11 @@ fn test_copia_smoke() -> TestEntry {
          rm -rf /tmp/cohete-test-src /tmp/cohete-test-dst",
     );
 
-    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
+    let status = if result.success {
+        TestStatus::Pass
+    } else {
+        TestStatus::Fail
+    };
     eprintln!("  copia sync (smoke): {}", status_label(&status));
 
     TestEntry {
@@ -280,7 +346,12 @@ fn test_copia_smoke() -> TestEntry {
 fn test_trueno_rag_smoke() -> TestEntry {
     if types::which("trueno-rag").is_none() {
         eprintln!("  trueno-rag (smoke): SKIP (not installed)");
-        return skip_entry("trueno-rag", "index_query_smoke", None, "binary not installed");
+        return skip_entry(
+            "trueno-rag",
+            "index_query_smoke",
+            None,
+            "binary not installed",
+        );
     }
 
     let result = runner::shell(
@@ -294,12 +365,17 @@ fn test_trueno_rag_smoke() -> TestEntry {
     // between versions and this is a smoke test, not a correctness test.
     let status = if result.success {
         TestStatus::Pass
-    } else if result.stderr.contains("Unsupported file format") || result.stderr.contains("unexpected argument") {
+    } else if result.stderr.contains("Unsupported file format")
+        || result.stderr.contains("unexpected argument")
+    {
         TestStatus::Warn
     } else {
         TestStatus::Fail
     };
-    eprintln!("  trueno-rag index+query (smoke): {}", status_label(&status));
+    eprintln!(
+        "  trueno-rag index+query (smoke): {}",
+        status_label(&status)
+    );
 
     TestEntry {
         binary: "trueno-rag".into(),
@@ -325,7 +401,11 @@ fn test_batuta_smoke() -> TestEntry {
     }
 
     let result = runner::run("batuta", &["oracle", "--rag", "test query"]);
-    let status = if result.success { TestStatus::Pass } else { TestStatus::Fail };
+    let status = if result.success {
+        TestStatus::Pass
+    } else {
+        TestStatus::Fail
+    };
     eprintln!("  batuta oracle (smoke): {}", status_label(&status));
 
     TestEntry {

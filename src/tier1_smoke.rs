@@ -11,9 +11,7 @@ pub fn run() -> SmokeResult {
 
     for def in BINARIES {
         let resolved = def.resolve_path();
-        let path_str = resolved
-            .as_deref()
-            .unwrap_or(def.preferred_path);
+        let path_str = resolved.as_deref().unwrap_or(def.preferred_path);
         let exists = resolved.is_some();
         let executable = exists && runner::is_executable(path_str);
 
@@ -27,14 +25,21 @@ pub fn run() -> SmokeResult {
                 };
                 (ver, true)
             } else {
-                eprintln!("  FAIL: {} --version exited {}", def.name, result.exit_code.unwrap_or(-1));
+                eprintln!(
+                    "  FAIL: {} --version exited {}",
+                    def.name,
+                    result.exit_code.unwrap_or(-1)
+                );
                 (None, false)
             }
         } else {
             if exists {
                 eprintln!("  FAIL: {} not executable at {path_str}", def.name);
             } else {
-                eprintln!("  FAIL: {} not found (checked {} and PATH)", def.name, def.preferred_path);
+                eprintln!(
+                    "  FAIL: {} not found (checked {} and PATH)",
+                    def.name, def.preferred_path
+                );
             }
             (None, false)
         };
