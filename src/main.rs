@@ -3,14 +3,11 @@
 //! Runs 5 tiers of tests against pre-installed binaries and produces
 //! falsifiable JSON artifacts proving the stack works on edge hardware.
 
-mod runner;
-mod tier1_smoke;
-mod tier2_hardware;
-mod tier3_functional;
-mod tier4_integration;
-mod tier5_performance;
-mod types;
-mod uat;
+// The modules live in the library now (see src/lib.rs): a bin-only crate makes
+// `cargo test --lib` a hard error, which is what made this repo unmergeable.
+use cohete::{
+    tier1_smoke, tier2_hardware, tier3_functional, tier4_integration, tier5_performance, types,
+};
 
 use clap::Parser;
 use std::path::{Path, PathBuf};
