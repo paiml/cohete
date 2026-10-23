@@ -2,6 +2,7 @@
   <img src="docs/hero.svg" alt="Cohete">
 </p>
 
+test
 # Cohete
 
 Nightly E2E verification proving the sovereign AI stack works on edge hardware.
