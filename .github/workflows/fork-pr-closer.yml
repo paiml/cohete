@@ -1,0 +1,11 @@
+# NO-FORK-1: close pull requests opened from forks. Must live on the default
+# branch: pull_request_target reads the workflow from the base branch.
+name: Fork PR Closer
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+permissions:
+  pull-requests: write
+jobs:
+  close:
+    uses: paiml/.github/.github/workflows/fork-pr-closer.yml@feat/no-fork-1
