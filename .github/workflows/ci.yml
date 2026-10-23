@@ -40,10 +40,17 @@ jobs:
     # billing state we do not control could block every merge in this repo
     # while the 16-runner fleet sat idle and healthy. The fleet is the
     # deterministic substrate (same reasoning as paiml/infra ci.yml).
-    runs-on: [self-hosted, clean-room]
+    # NO-FORK-1: a fork PR (head repo != this repo) goes to a GitHub-hosted runner and fails
+    # below with no checkout, so the context stays `gate` and ends RED, never skipped.
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-latest' || fromJSON('["self-hosted","clean-room"]') }}
     needs: [ci]
     if: always()
     steps:
+      - name: Refuse a fork PR (NO-FORK-1)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::error::fork PRs are not accepted (NO-FORK-1); gate is red by design"
+          exit 1
       - name: Every required job must have succeeded
         run: |
           set -euo pipefail
